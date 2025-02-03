@@ -1,6 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
+const District = require("./District");
+
 const LocalCongregation = sequelize.define(
   "LocalCongregation",
   {
@@ -29,5 +31,8 @@ const LocalCongregation = sequelize.define(
     updatedAt: "updated_at", // Map to 'updated_at' column
   }
 );
+
+// ✅ Define the association
+LocalCongregation.belongsTo(District, { foreignKey: "district_id" });
 
 module.exports = LocalCongregation;

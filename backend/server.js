@@ -10,12 +10,10 @@ const bodyParser = require("body-parser");
 const districtsRoutes = require("./routes/districtsRoutes");
 const localCongregationRoutes = require("./routes/localCongregationRoutes");
 
-
 const IP_Address = process.env.REACT_IP_ADDRESS || "0.0.0.0"; // Default to listening on all interfaces
 
 const app = express();
 const PORT = process.env.REACT_PORT || 5000;
-
 
 app.use(
   cors({
@@ -23,7 +21,6 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
-
 
 app.use(express.json()); // Middleware to parse JSON request bodies
 
@@ -34,7 +31,6 @@ app.use(bodyParser.urlencoded({ limit: "100mb", extended: true }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 
 app.use(districtsRoutes);
 app.use(localCongregationRoutes);
