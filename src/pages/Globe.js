@@ -98,6 +98,7 @@ const Globe = () => {
   const handleCongregationHover = async (cong) => {
     setSelectedCongregation(cong);
     setCongregationSchedule(""); // Clear previous data
+    setLoadingSchedule(true); // Set loading state to true
     onOpen();
 
     try {
@@ -107,6 +108,8 @@ const Globe = () => {
       setCongregationSchedule(response.data.schedule);
     } catch (error) {
       setCongregationSchedule("<p>Failed to load schedule.</p>");
+    } finally {
+      setLoadingSchedule(false); // Stop loading after fetching
     }
   };
 
