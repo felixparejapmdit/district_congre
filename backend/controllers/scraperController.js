@@ -2,7 +2,10 @@ const puppeteer = require("puppeteer");
 
 // 🟢 Scrape Worship Service Schedule
 const scrapeCongregationSchedule = async (req, res) => {
-  const congregation = req.params.congregation.replace(/\s+/g, "-"); // Format congregation name
+  const congregation = req.params.congregation
+    .replace(/\s+/g, "-") // Replace spaces with "-"
+    .replace(/[.,]/g, ""); // Remove both dots (.) and commas (,)
+
   const url = `https://directory.iglesianicristo.net/locales/${congregation}`;
 
   console.log(`🔍 Scraping data from: ${url}`);
