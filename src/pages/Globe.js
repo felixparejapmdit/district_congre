@@ -54,7 +54,7 @@ const Globe = () => {
   const { isOpen, onOpen, onClose } = useDisclosure(); // Modal state
 
   const API_URL = process.env.REACT_APP_API_URL;
-  const SCRAPER_URL = "http://localhost:5001/api/scrape"; // Backend scraper API
+  const SCRAPER_URL = `${API_URL}/api/scrape`; // Backend scraper API
 
   useEffect(() => {
     axios
