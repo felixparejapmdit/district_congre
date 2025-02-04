@@ -94,12 +94,12 @@ const Globe = () => {
       .finally(() => setLoadingCongregations(false));
   };
 
-  // 🟢 Fetch congregation schedule from backend scraper
-  const handleCongregationHover = async (cong) => {
+  // 🟢 Fetch congregation schedule from backend scraper on Click
+  const handleCongregationClick = async (cong) => {
     setSelectedCongregation(cong);
     setCongregationSchedule(""); // Clear previous data
-    setLoadingSchedule(true); // Set loading state to true
-    onOpen();
+    setLoadingSchedule(true); // Show loading indicator
+    onOpen(); // Open modal
 
     try {
       const response = await axios.get(
@@ -109,7 +109,7 @@ const Globe = () => {
     } catch (error) {
       setCongregationSchedule("<p>Failed to load schedule.</p>");
     } finally {
-      setLoadingSchedule(false); // Stop loading after fetching
+      setLoadingSchedule(false); // Stop loading
     }
   };
 
@@ -208,8 +208,8 @@ const Globe = () => {
                     p="2"
                     bg="gray.100"
                     borderRadius="5px"
-                    onMouseEnter={() => handleCongregationHover(cong)}
                     cursor="pointer"
+                    onClick={() => handleCongregationClick(cong)} // 🟢 Click to Open Modal
                   >
                     📍 {cong.name}
                   </ListItem>
