@@ -249,16 +249,6 @@ const Globe = () => {
                 overflowY="auto"
               >
                 {/* Header */}
-                <Box bg="blue.50" p="4" borderRadius="md" mb="4">
-                  <Text fontSize="lg" fontWeight="bold" color="blue.600">
-                    Worship Service Schedule
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    Be sure to confirm worship service schedules before
-                    attending. Worship service times may be temporarily or
-                    recently changed.
-                  </Text>
-                </Box>
 
                 {/* Render Schedule - Apply custom CSS for layout */}
                 <Box px="2" className="schedule-layout">

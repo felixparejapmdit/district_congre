@@ -1,21 +1,84 @@
+/* Style the container for the Worship Service Schedule */
 .schedule-container {
-  padding: 10px;
-  background-color: #f9fafb;
+  padding: 16px;
+  background-color: #f3f4f6; /* Light gray background */
   border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* Style the main title "Worship Service Schedule" */
+.schedule-container h2 {
+  font-size: 22px;
+  font-weight: bold;
+  color: #1e40af; /* Dark blue */
+  margin-bottom: 8px;
+}
+
+/* Style the description below the title */
+.schedule-container strong {
+  display: block;
+  font-size: 14px;
+  color: #374151; /* Dark gray */
+  font-weight: normal;
+  padding: 8px;
+  background: #e0e7ff; /* Light blue background */
+  border-radius: 6px;
+}
+
+/* Style for Worship Service Schedule Title */
+.mdl-card__title-text {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1e40af; /* Dark blue */
+  text-align: center;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Style for Worship Service Confirmation Text */
+.mdl-card__supporting-text strong {
+  font-size: 14px;
+  font-weight: normal;
+  color: #374151; /* Dark Gray */
+  display: block;
+  text-align: center;
+  background-color: #f3f4f6; /* Light Gray Background */
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.daygroup {
+.schedule-header {
+  font-size: 18px;
+  font-weight: bold;
+  color: #1e40af; /* Darker blue */
+  margin-bottom: 5px;
+}
+
+.schedule-description {
+  font-size: 14px;
+  color: #475569; /* Neutral gray */
+  line-height: 1.5;
   margin-bottom: 10px;
+  font-style: italic;
+}
+
+.daygroup {
+  margin-bottom: 12px;
   padding: 8px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #cbd5e1;
 }
 
 .daygroup h6 {
   font-size: 16px;
   font-weight: bold;
-  color: #333;
+  color: #1e293b;
   margin-bottom: 5px;
+  text-transform: uppercase;
 }
 
 .chip-break {
@@ -27,21 +90,27 @@
 .chip {
   background: #e0e7ff;
   color: #374151;
-  padding: 5px 12px;
+  padding: 6px 14px;
   border-radius: 20px;
   font-size: 14px;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1);
 }
 
 .subchip {
   background: #facc15;
   color: #fff;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 12px;
   font-size: 12px;
   font-weight: bold;
   text-transform: uppercase;
+}
+
+/* Adjustments for better alignment */
+.schedule-container .daygroup:last-child {
+  border-bottom: none;
 }
