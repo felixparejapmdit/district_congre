@@ -13,24 +13,41 @@ const scrapeCongregationSchedule = async (req, res) => {
   try {
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"], // Ensures Puppeteer works in all environments
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-gpu",
+        "--disable-dev-shm-usage",
+      ], // Optimized for speed and server environments
     });
 
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: "load", timeout: 60000 });
 
-    // Ensure element exists before scraping
+    // 🚀 Block unnecessary resources like images, styles, and fonts
+    await page.setRequestInterception(true);
+    page.on("request", (req) => {
+      if (
+        ["image", "stylesheet", "font", "media"].includes(req.resourceType())
+      ) {
+        req.abort(); // Block unnecessary requests
+      } else {
+        req.continue();
+      }
+    });
+
+    // ✅ Faster page loading using `networkidle0` (instead of `load`)
+    await page.goto(url, { waitUntil: "networkidle0", timeout: 100000 });
+
+    // Ensure the target element is present
     await page.waitForSelector(".demo-card-square.mdl-card.mdl-shadow--2dp", {
-      timeout: 60000,
+      timeout: 30000, // Reduce timeout for quicker failures
     });
 
     const scheduleData = await page.evaluate(() => {
       const containers = document.querySelectorAll(
         ".demo-card-square.mdl-card.mdl-shadow--2dp"
       );
-      if (!containers.length) {
-        return "<p>No worship schedule found.</p>";
-      }
+      if (!containers.length) return "<p>No worship schedule found.</p>";
 
       // Get the last instance of the element (latest schedule)
       const lastContainer = containers[containers.length - 1];
