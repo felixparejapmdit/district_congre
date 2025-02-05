@@ -1,6 +1,7 @@
-const puppeteer = require("puppeteer");
+const axios = require("axios");
+const cheerio = require("cheerio");
 
-// 🟢 Scrape Worship Service Schedule
+// 🟢 Scrape Worship Service Schedule (Using Axios + Cheerio)
 const scrapeCongregationSchedule = async (req, res) => {
   const congregation = req.params.congregation
     .replace(/\s+/g, "-") // Replace spaces with "-"
@@ -11,66 +12,29 @@ const scrapeCongregationSchedule = async (req, res) => {
   console.log(`🔍 Scraping data from: ${url}`);
 
   try {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-gpu",
-        "--disable-dev-shm-usage",
-      ], // Optimized for speed and server environments
-    });
+    // ✅ Use Axios for a fast HTTP request (No Browser Overhead)
+    const { data } = await axios.get(url, { timeout: 15000 });
 
-    const page = await browser.newPage();
+    // ✅ Load HTML response into Cheerio
+    const $ = cheerio.load(data);
 
-    // 🚀 Block unnecessary resources like images, styles, and fonts
-    await page.setRequestInterception(true);
-    page.on("request", (req) => {
-      if (
-        ["image", "stylesheet", "font", "media"].includes(req.resourceType())
-      ) {
-        req.abort(); // Block unnecessary requests
-      } else {
-        req.continue();
-      }
-    });
+    // ✅ Select all schedule containers
+    const containers = $(".demo-card-square.mdl-card.mdl-shadow--2dp");
 
-    // ✅ Faster page loading using `networkidle0` (instead of `load`)
-    await page.goto(url, { waitUntil: "networkidle0", timeout: 100000 });
-
-    // Ensure the target element is present
-    await page.waitForSelector(".demo-card-square.mdl-card.mdl-shadow--2dp", {
-      timeout: 30000, // Reduce timeout for quicker failures
-    });
-
-    const scheduleData = await page.evaluate(() => {
-      const containers = document.querySelectorAll(
-        ".demo-card-square.mdl-card.mdl-shadow--2dp"
-      );
-      if (!containers.length) return "<p>No worship schedule found.</p>";
-
-      // Get the last instance of the element (latest schedule)
-      const lastContainer = containers[containers.length - 1];
-
-      // Remove unwanted elements (Google Maps iframe, navigation buttons)
-      lastContainer
-        .querySelectorAll("iframe, .mdl-card__actions")
-        .forEach((el) => el.remove());
-
-      return lastContainer.outerHTML;
-    });
-
-    await browser.close();
-
-    if (!scheduleData.includes("Worship Service Schedule")) {
-      console.log("⚠️ Schedule not found.");
+    if (!containers.length) {
       return res.json({
         congregation,
         schedule: "<p>No worship schedule found.</p>",
       });
     }
 
-    res.json({ congregation, schedule: scheduleData });
+    // ✅ Get the last schedule container (latest schedule)
+    const lastContainer = containers.last().html();
+
+    res.json({
+      congregation,
+      schedule: `<div class="schedule-container">${lastContainer}</div>`,
+    });
   } catch (error) {
     console.error("❌ Scraping failed:", error);
     res.status(500).json({ error: "Failed to scrape data." });
