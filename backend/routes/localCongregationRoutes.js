@@ -14,6 +14,12 @@ router.get(
   localCongregationController.getLocalCongregationsByDistrict
 );
 
+// 🟢 Route to get all congregations
+router.get(
+  "/api/all-congregations",
+  localCongregationController.getAllLocalCongregations
+);
+
 // Get a single local congregation by ID
 router.get(
   "/api/local-congregations/:id",

@@ -97,19 +97,48 @@ const Globe = () => {
   // 🟢 Fetch congregation schedule from backend scraper on Click
   const handleCongregationClick = async (cong) => {
     setSelectedCongregation(cong);
-    setCongregationSchedule(""); // Clear previous data
-    setLoadingSchedule(true); // Show loading indicator
-    onOpen(); // Open modal
-
+    setCongregationSchedule("");
+    setLoadingSchedule(true);
+    onOpen();
     try {
       const response = await axios.get(
-        `${SCRAPER_URL}/${cong.name.replace(/\s+/g, "-")}`
+        `${SCRAPER_URL}/${cong.name.replace(/\s+/g, "-").replace(/[.,]/g, "")}`
       );
       setCongregationSchedule(response.data.schedule);
     } catch (error) {
       setCongregationSchedule("<p>Failed to load schedule.</p>");
     } finally {
-      setLoadingSchedule(false); // Stop loading
+      setLoadingSchedule(false);
+    }
+  };
+
+  // 🟢 Handle Enter Key to Search Congregation and Open Modal
+  const handleEnterPress = async (e) => {
+    if (e.key === "Enter" && searchCongregation.trim() !== "") {
+      try {
+        let allCongregations = [...localCongregations];
+
+        // Fetch congregations if the list is empty
+        if (allCongregations.length === 0) {
+          const response = await axios.get(`${API_URL}/api/all-congregations`);
+          allCongregations = response.data;
+          setLocalCongregations(allCongregations);
+        }
+
+        // Search for the congregation
+        const foundCongregation = allCongregations.find((cong) =>
+          cong.name.toLowerCase().includes(searchCongregation.toLowerCase())
+        );
+
+        if (foundCongregation) {
+          handleCongregationClick(foundCongregation);
+        } else {
+          alert("Congregation not found. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error fetching congregations:", error);
+        alert("Failed to retrieve congregation data.");
+      }
     }
   };
 
@@ -167,59 +196,50 @@ const Globe = () => {
           </List>
         </Box>
       </Box>
-      {/* 🏠 Right Panel - Local Congregations */}
-      {selectedDistrict && (
-        <Box
-          position="absolute"
-          top="10"
-          right="10"
-          width="300px"
-          bg="white"
-          boxShadow="xl"
-          borderRadius="10px"
-          zIndex="2000"
-          overflow="hidden"
-          maxHeight="80vh"
-        >
-          <Box bg="white" position="sticky" top="0" zIndex="100" p="4">
-            <Text fontSize="lg" fontWeight="bold" color="blue.600">
-              📌 {selectedDistrict.name}
-            </Text>
-            <Input
-              placeholder="Search congregation..."
-              value={searchCongregation}
-              onChange={(e) => setSearchCongregation(e.target.value)}
-              mt="2"
-            />
-          </Box>
-
-          <Box maxHeight="60vh" overflowY="auto" p="4">
-            <List spacing={2}>
-              {localCongregations
-                .filter((cong) =>
-                  cong.name
-                    .toLowerCase()
-                    .includes(searchCongregation.toLowerCase())
-                )
-                .map((cong) => (
-                  <ListItem
-                    key={cong.id}
-                    fontSize="sm"
-                    p="2"
-                    bg="gray.100"
-                    borderRadius="5px"
-                    cursor="pointer"
-                    onClick={() => handleCongregationClick(cong)} // 🟢 Click to Open Modal
-                  >
-                    📍 {cong.name}
-                  </ListItem>
-                ))}
-            </List>
-          </Box>
+      {/* 🏠 Right Panel - Find Congregation */}
+      <Box
+        position="absolute"
+        top="10"
+        right="10"
+        width="300px"
+        bg="white"
+        boxShadow="xl"
+        borderRadius="10px"
+        zIndex="2000"
+        overflow="hidden"
+        maxHeight="80vh"
+      >
+        <Box bg="white" position="sticky" top="0" zIndex="100" p="4">
+          <Text fontSize="lg" fontWeight="bold" color="blue.600">
+            Find a Congregation
+          </Text>
+          <Input
+            placeholder="Search congregation..."
+            value={searchCongregation}
+            onChange={(e) => setSearchCongregation(e.target.value)}
+            onKeyDown={handleEnterPress} // 🟢 Fixed Enter Key Handling
+            mt="2"
+          />
         </Box>
-      )}
+        <Box maxHeight="60vh" overflowY="auto" p="4">
+          <List spacing={2}>
+            {localCongregations.map((cong) => (
+              <ListItem
+                key={cong.id}
+                fontSize="sm"
+                p="2"
+                bg="gray.100"
+                borderRadius="5px"
+                cursor="pointer"
+                onClick={() => handleCongregationClick(cong)}
+              >
+                📍 {cong.name}
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      </Box>
 
-      {/* 📌 Modal for Congregation Schedule */}
       {/* 📌 Modal for Congregation Schedule */}
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
         <ModalOverlay />
