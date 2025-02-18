@@ -15,7 +15,7 @@ const scraperRoutes = require("./routes/scraperRoutes");
 const IP_Address = process.env.REACT_IP_ADDRESS || "0.0.0.0"; // Default to listening on all interfaces
 
 const app = express();
-const PORT = process.env.REACT_PORT || 5000;
+const PORT = process.env.REACT_PORT || 80;
 
 app.use(
   cors({
