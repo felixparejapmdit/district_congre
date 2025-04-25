@@ -211,7 +211,7 @@ const Globe = () => {
       >
         <Box bg="white" position="sticky" top="0" zIndex="100" p="4">
           <Text fontSize="lg" fontWeight="bold" color="blue.600">
-            Find a Congregation
+            Find a Congregation - 1
           </Text>
           <Input
             placeholder="Search congregation..."
