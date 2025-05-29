@@ -57,18 +57,25 @@ const Globe = () => {
   const SCRAPER_URL = `${API_URL}/api/scrape`; // Backend scraper API
 
   useEffect(() => {
-    axios
-      .get(`${API_URL}/api/districts`)
-      .then((response) => {
+    const fetchDistricts = async (retryCount = 3) => {
+      try {
+        const response = await axios.get(`${API_URL}/api/districts`);
         const updatedDistricts = response.data.map((district) => ({
           ...district,
           latitude: district.latitude || 12.8797,
           longitude: district.longitude || 121.774,
         }));
-
         setDistricts(updatedDistricts);
-      })
-      .catch((error) => console.error("Error fetching districts:", error));
+      } catch (error) {
+        if (retryCount > 0) {
+          setTimeout(() => fetchDistricts(retryCount - 1), 1000); // retry after 1s
+        } else {
+          console.error("Failed to fetch districts:", error);
+        }
+      }
+    };
+
+    fetchDistricts();
   }, []);
 
   // 🟢 Function to handle district selection

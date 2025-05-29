@@ -1,46 +1,51 @@
 require("dotenv").config();
-
 const express = require("express");
-
 const path = require("path");
-
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const fs = require("fs");
+const http = require("http");
+const https = require("https");
 
 const districtsRoutes = require("./routes/districtsRoutes");
 const localCongregationRoutes = require("./routes/localCongregationRoutes");
-
 const scraperRoutes = require("./routes/scraperRoutes");
 
-const IP_Address = process.env.REACT_IP_ADDRESS || "0.0.0.0"; // Default to listening on all interfaces
-
 const app = express();
-const PORT = process.env.REACT_PORT || 80;
 
-app.use(
-  cors({
-    origin: "*", // Allow all origins (for development)
-    methods: ["GET", "POST", "PUT", "DELETE"],
-  })
-);
+// Environment variables
+const IP_ADDRESS = process.env.REACT_IP_ADDRESS?.replace("//", "") || "0.0.0.0";
+const HTTP_PORT = parseInt(process.env.REACT_PORT_HTTP) || 80;
+const HTTPS_PORT = parseInt(process.env.REACT_PORT_HTTPS) || 443;
+const USE_HTTPS = process.env.HTTPS === "true";
 
-app.use(express.json()); // Middleware to parse JSON request bodies
-
-app.use(cors({ origin: "*" }));
-app.use(bodyParser.json({ limit: "100mb" })); // Increased limit to handle Base64 images
+// Middleware setup
+app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }));
+app.use(express.json());
+app.use(bodyParser.json({ limit: "100mb" }));
 app.use(bodyParser.urlencoded({ limit: "100mb", extended: true }));
-
 app.use(express.urlencoded({ extended: true }));
-
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// 📌 Use the scraper routes
+// Routes
 app.use(scraperRoutes);
-
 app.use(districtsRoutes);
 app.use(localCongregationRoutes);
 
-// --- Start server ---
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server is running on ${IP_Address}:${PORT}`);
-});
+// Server creation
+if (USE_HTTPS) {
+  const options = {
+    key: fs.readFileSync(process.env.SSL_KEY_FILE),
+    cert: fs.readFileSync(process.env.SSL_CRT_FILE),
+  };
+
+  https.createServer(options, app).listen(HTTPS_PORT, IP_ADDRESS, () => {
+    console.log(
+      `✅ HTTPS Server running at https://${IP_ADDRESS}:${HTTPS_PORT}`
+    );
+  });
+} else {
+  http.createServer(app).listen(HTTP_PORT, IP_ADDRESS, () => {
+    console.log(`✅ HTTP Server running at http://${IP_ADDRESS}:${HTTP_PORT}`);
+  });
+}
