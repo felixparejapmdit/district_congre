@@ -19,6 +19,15 @@ const HTTP_PORT = parseInt(process.env.REACT_PORT_HTTP) || 80;
 const HTTPS_PORT = parseInt(process.env.REACT_PORT_HTTPS) || 443;
 const USE_HTTPS = process.env.HTTPS === "true";
 
+// SSL config
+let sslOptions = null;
+if (process.env.HTTPS === "true") {
+  sslOptions = {
+    key: fs.readFileSync(process.env.SSL_KEY_FILE),
+    cert: fs.readFileSync(process.env.SSL_CRT_FILE),
+  };
+}
+
 // Middleware setup
 app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }));
 app.use(express.json());
@@ -32,20 +41,32 @@ app.use(scraperRoutes);
 app.use(districtsRoutes);
 app.use(localCongregationRoutes);
 
-// Server creation
-if (USE_HTTPS) {
-  const options = {
-    key: fs.readFileSync(process.env.SSL_KEY_FILE),
-    cert: fs.readFileSync(process.env.SSL_CRT_FILE),
-  };
+// // Server creation
+// if (USE_HTTPS) {
+//   const options = {
+//     key: fs.readFileSync(process.env.SSL_KEY_FILE),
+//     cert: fs.readFileSync(process.env.SSL_CRT_FILE),
+//   };
 
-  https.createServer(options, app).listen(HTTPS_PORT, IP_ADDRESS, () => {
-    console.log(
-      `✅ HTTPS Server running at https://${IP_ADDRESS}:${HTTPS_PORT}`
-    );
-  });
-} else {
-  http.createServer(app).listen(HTTP_PORT, IP_ADDRESS, () => {
-    console.log(`✅ HTTP Server running at http://${IP_ADDRESS}:${HTTP_PORT}`);
+//   https.createServer(options, app).listen(HTTPS_PORT, IP_ADDRESS, () => {
+//     console.log(
+//       `✅ HTTPS Server running at https://${IP_ADDRESS}:${HTTPS_PORT}`
+//     );
+//   });
+// } else {
+//   http.createServer(app).listen(HTTP_PORT, IP_ADDRESS, () => {
+//     console.log(`✅ HTTP Server running at http://${IP_ADDRESS}:${HTTP_PORT}`);
+//   });
+// }
+
+// Start HTTP server
+http.createServer(app).listen(HTTP_PORT, IP_ADDRESS, () => {
+  console.log(`✅ HTTP Server running at http://localhost:${HTTP_PORT}`);
+});
+
+// Start HTTPS server
+if (sslOptions) {
+  https.createServer(sslOptions, app).listen(HTTPS_PORT, IP_ADDRESS, () => {
+    console.log(`✅ HTTPS Server running at https://localhost:${HTTPS_PORT}`);
   });
 }
