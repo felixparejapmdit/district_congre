@@ -59,7 +59,7 @@ const Globe = () => {
   useEffect(() => {
     const fetchDistricts = async (retryCount = 3) => {
       try {
-        alert(`${API_URL}/api/districts`);
+        //alert(`${API_URL}/api/districts`);
         const response = await axios.get(`${API_URL}/api/districts`);
         const updatedDistricts = response.data.map((district) => ({
           ...district,
