@@ -31,6 +31,7 @@ const scrapeCongregationSchedule = async (req, res) => {
     // ✅ Get the last schedule container (latest schedule)
     const lastContainer = containers.last().html();
 
+console.log(lastContainer);
     res.json({
       congregation,
       schedule: `<div class="schedule-container">${lastContainer}</div>`,

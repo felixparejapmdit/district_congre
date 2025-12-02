@@ -8,16 +8,10 @@ router.post(
   localCongregationController.importLocalCongregations
 );
 
-// ✅ Get all local congregations OR filter by district_id
+// Get all OR filter by district_id
 router.get(
   "/api/local-congregations",
   localCongregationController.getLocalCongregationsByDistrict
-);
-
-// 🟢 Route to get all congregations
-router.get(
-  "/api/all-congregations",
-  localCongregationController.getAllLocalCongregations
 );
 
 // Get a single local congregation by ID
@@ -32,13 +26,13 @@ router.post(
   localCongregationController.createLocalCongregation
 );
 
-// Update a local congregation by ID
+// Update a local congregation
 router.put(
   "/api/local-congregations/:id",
   localCongregationController.updateLocalCongregation
 );
 
-// Delete a local congregation by ID
+// Delete a local congregation
 router.delete(
   "/api/local-congregations/:id",
   localCongregationController.deleteLocalCongregation
