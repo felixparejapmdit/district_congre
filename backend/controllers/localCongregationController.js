@@ -147,3 +147,46 @@ exports.deleteLocalCongregation = async (req, res) => {
     });
   }
 };
+
+
+
+
+// ===============================
+// MULTI-DISTRICT (NEW)
+// ===============================
+exports.getLocalCongregationsByMultiDistrict = async (req, res) => {
+  try {
+    const districtIds = req.query.district_ids;
+
+    if (!districtIds) {
+      return res.status(400).json({ error: "district_ids is required" });
+    }
+
+    const ids = districtIds.split(",").map(Number);
+
+    const congregations = await LocalCongregation.findAll({
+      where: { district_id: ids },
+      order: [["name", "ASC"]],
+    });
+
+    res.json(congregations);
+  } catch (err) {
+    console.error("Error fetching multi-district congregations:", err);
+    res.status(500).json({ error: "Failed to fetch multi-district congregations" });
+  }
+};
+
+// ===============================
+// ALL CONGREGATIONS (NEW)
+// ===============================
+exports.getAllCongregations = async (req, res) => {
+  try {
+    const congregations = await LocalCongregation.findAll({
+      order: [["name", "ASC"]],
+    });
+    res.json(congregations);
+  } catch (err) {
+    console.error("Error fetching all congregations:", err);
+    res.status(500).json({ error: "Failed to fetch all congregations" });
+  }
+};
