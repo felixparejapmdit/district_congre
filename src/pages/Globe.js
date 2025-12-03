@@ -359,7 +359,7 @@ const Globe = () => {
                     justifyContent="center"
                 >
                     <Spinner size="xl" color="white" thickness="4px" />
-                    <Text color="white" ml="4" fontSize="xl">Generating Schedule...</Text>
+                    <Text color="white" ml="4" fontSize="xl">Generating WS Schedule...</Text>
                 </Box>
             )}
 
