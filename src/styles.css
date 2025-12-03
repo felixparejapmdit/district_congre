@@ -1,3 +1,16 @@
+/* ------------------------------------------------------------------- */
+/* 🟢 NEW: Global Body Background Color (Simulating Map/Ocean Blue) */
+/* ------------------------------------------------------------------- */
+body {
+    /* Changed background-image to a map-like color (e.g., light ocean blue/cyan) */
+    background-color: #E0FFFF; /* Azure/Light Cyan */
+    background-image: none; /* Explicitly remove the image */
+    background-size: auto; 
+    background-position: initial; 
+    background-repeat: initial;
+    background-attachment: initial;
+}
+
 /* Style the container for the Worship Service Schedule */
 .schedule-container {
   padding: 16px;
