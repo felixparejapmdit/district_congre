@@ -156,10 +156,12 @@ exports.deleteLocalCongregation = async (req, res) => {
 // ===============================
 exports.getLocalCongregationsByMultiDistrict = async (req, res) => {
   try {
-    const districtIds = req.query.district_ids;
+    // 1. Change this to match the URL parameter name
+    const districtIds = req.query.district_ids; 
 
     if (!districtIds) {
-      return res.status(400).json({ error: "district_ids is required" });
+      // 2. Update the error message to be clear
+      return res.status(400).json({ error: "district_ids is required" }); 
     }
 
     const ids = districtIds.split(",").map(Number);

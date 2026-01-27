@@ -151,9 +151,13 @@ const Globe = () => {
         
         try {
             // Fetch list based on selection
+            // const response = await axios.get(
+            //     `${API_URL}/api/local-congregations-multi?ids=${ids.join(',')}`
+            // );
+
             const response = await axios.get(
-                `${API_URL}/api/local-congregations-multi?ids=${ids.join(',')}`
-            );
+    `${API_URL}/api/local-congregations-multi?district_ids=${ids.join(',')}`
+);
             
             // MAP FIX: Set focus to the first congregation found, if available
             if (response.data.length > 0) {
@@ -234,6 +238,7 @@ const Globe = () => {
 
     // Fetch congregation schedule from backend scraper on Click
     const handleCongregationClick = async (cong) => {
+        
         setSelectedCongregation(cong);
         setCongregationSchedule("");
         setLoadingSchedule(true);
