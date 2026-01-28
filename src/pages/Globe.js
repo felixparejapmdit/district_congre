@@ -24,7 +24,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "../styles.css";
-import { FaCheckSquare, FaRegSquare, FaDownload } from "react-icons/fa";
+import { FaCheckSquare, FaRegSquare, FaDownload, FaEraser } from "react-icons/fa";
 
 // Helper for delay
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -53,14 +53,14 @@ const Globe = () => {
     const [selectedDistrictIds, setSelectedDistrictIds] = useState([]);
     const [mapFocusDistrict, setMapFocusDistrict] = useState(null);
     const [localCongregations, setLocalCongregations] = useState([]);
-    const [allCongregations, setAllCongregations] = useState([]); 
+    const [allCongregations, setAllCongregations] = useState([]);
     const [searchDistrict, setSearchDistrict] = useState("");
     const [searchCongregation, setSearchCongregation] = useState("");
     const [loadingCongregations, setLoadingCongregations] = useState(false);
     const [selectedCongregation, setSelectedCongregation] = useState(null);
     const [congregationSchedule, setCongregationSchedule] = useState("");
     const [loadingSchedule, setLoadingSchedule] = useState(false);
-    const [isExporting, setIsExporting] = useState(false); 
+    const [isExporting, setIsExporting] = useState(false);
 
     const { isOpen: isScheduleOpen, onOpen: openSchedule, onClose: closeSchedule } = useDisclosure();
     const { isOpen: isConfirmOpen, onOpen: openConfirm, onClose: closeConfirm } = useDisclosure();
@@ -83,7 +83,7 @@ const Globe = () => {
         }
         const searchTerm = searchCongregation.toLowerCase();
         // Always search against the master list for universal results
-        return allCongregations.filter(cong => 
+        return allCongregations.filter(cong =>
             cong.name.toLowerCase().includes(searchTerm)
         );
     }, [allCongregations, localCongregations, searchCongregation]);
@@ -140,7 +140,7 @@ const Globe = () => {
         if (searchCongregation) return;
 
         // CRITICAL FIX: Clear list immediately if no IDs selected
-        if (ids.length === 0) { 
+        if (ids.length === 0) {
             setLocalCongregations([]);
             setLoadingCongregations(false);
             return;
@@ -148,7 +148,7 @@ const Globe = () => {
 
         setLocalCongregations([]);
         setLoadingCongregations(true);
-        
+
         try {
             // Fetch list based on selection
             // const response = await axios.get(
@@ -156,12 +156,12 @@ const Globe = () => {
             // );
 
             const response = await axios.get(
-    `${API_URL}/api/local-congregations-multi?district_ids=${ids.join(',')}`
-);
-            
+                `${API_URL}/api/local-congregations-multi?district_ids=${ids.join(',')}`
+            );
+
             // MAP FIX: Set focus to the first congregation found, if available
             if (response.data.length > 0) {
-                 setMapFocusDistrict(response.data[0]); 
+                setMapFocusDistrict(response.data[0]);
             }
 
             setLocalCongregations(response.data);
@@ -207,12 +207,12 @@ const Globe = () => {
     const handleDistrictClick = (district) => {
         setMapFocusDistrict(district);
         setSearchCongregation(""); // Clear congregation search when focusing on a district
-        
+
         // Load congregations for the clicked district (either its own or the group's)
         if (!selectedDistrictIds.includes(district.id)) {
-             fetchSelectedCongregations([district.id]);
+            fetchSelectedCongregations([district.id]);
         } else {
-             fetchSelectedCongregations(selectedDistrictIds);
+            fetchSelectedCongregations(selectedDistrictIds);
         }
     };
 
@@ -230,7 +230,7 @@ const Globe = () => {
             const firstVisible = filteredDistricts[0];
             if (firstVisible) setMapFocusDistrict(firstVisible);
         }
-        
+
         setSelectedDistrictIds(newSelectedIds);
         fetchSelectedCongregations(newSelectedIds);
     };
@@ -238,11 +238,11 @@ const Globe = () => {
 
     // Fetch congregation schedule from backend scraper on Click
     const handleCongregationClick = async (cong) => {
-        
+
         setSelectedCongregation(cong);
         setCongregationSchedule("");
         setLoadingSchedule(true);
-        openSchedule(); 
+        openSchedule();
         try {
             const congUrlSegment = cong.name.replace(/\s+/g, "-").replace(/[.,]/g, "").replace(/'/g, "");
             const response = await axios.get(`${SCRAPER_URL}/${congUrlSegment}`);
@@ -253,7 +253,7 @@ const Globe = () => {
             setLoadingSchedule(false);
         }
     };
-    
+
     // 🟢 Handles live search input change
     const handleSearchCongregationChange = (e) => {
         const searchTerm = e.target.value;
@@ -261,7 +261,7 @@ const Globe = () => {
 
         // Map focuses on the first visible result while typing
         if (searchTerm) {
-            const firstMatch = allCongregations.find(cong => 
+            const firstMatch = allCongregations.find(cong =>
                 cong.name.toLowerCase().includes(searchTerm.toLowerCase())
             );
             if (firstMatch) {
@@ -273,7 +273,7 @@ const Globe = () => {
     // 🟢 Handle Enter Key to Search Congregation (Finalized search)
     const handleEnterPress = async (e) => {
         if (e.key === "Enter" && searchCongregation.trim() !== "") {
-            
+
             // Perform exact match search
             const foundCongregation = filteredCongregations.find((cong) =>
                 cong.name.toLowerCase() === searchCongregation.trim().toLowerCase()
@@ -282,10 +282,10 @@ const Globe = () => {
             if (foundCongregation) {
                 // Focus map on the exact congregation location
                 setMapFocusDistrict(foundCongregation);
-                
+
                 // Load only this congregation to the right panel/map (temporarily override display)
                 setLocalCongregations([foundCongregation]);
-                
+
                 // Open the schedule modal
                 handleCongregationClick(foundCongregation);
             } else {
@@ -300,9 +300,9 @@ const Globe = () => {
             alert("Select at least one district.");
             return;
         }
-        openConfirm(); 
+        openConfirm();
     };
-    
+
     const confirmExport = async () => {
         closeConfirm();
         setIsExporting(true);
@@ -332,13 +332,19 @@ const Globe = () => {
             link.click();
             link.remove();
             window.URL.revokeObjectURL(url);
-            
+
         } catch (error) {
             console.error("Export failed:", error);
             alert("Export failed. Check console and backend logs.");
         } finally {
             setIsExporting(false);
         }
+    };
+
+    // Clear all selected districts
+    const handleClearSelection = () => {
+        setSelectedDistrictIds([]);
+        fetchSelectedCongregations([]);
     };
 
     // Get selected district names for display in the left panel
@@ -348,7 +354,7 @@ const Globe = () => {
     // UI render
     return (
         <Box display="flex" width="100vw" height="100vh" position="relative" overflowX="hidden">
-            
+
             {/* 💡 OVERLAY for Export Loading */}
             {isExporting && (
                 <Box
@@ -369,14 +375,14 @@ const Globe = () => {
             )}
 
             {/* Left Panel - District List (Responsive Width) */}
-            <Box 
-                width={['100%', '25%']} 
-                bg="gray.100" 
-                p="4" 
-                display="flex" 
-                flexDirection="column" 
+            <Box
+                width={['100%', '25%']}
+                bg="gray.100"
+                p="4"
+                display="flex"
+                flexDirection="column"
                 zIndex="10"
-                height={['auto', '100vh']} 
+                height={['auto', '100vh']}
                 minHeight={['300px', '100vh']}
             >
                 {/* Sticky Header with Search Bar and Export Button */}
@@ -406,20 +412,32 @@ const Globe = () => {
                         </Tooltip>
                     </HStack>
 
-                    <Button
-                        mt="2"
-                        colorScheme="green"
-                        width="100%"
-                        onClick={handleExportClick}
-                        isLoading={isExporting}
-                        loadingText="Generating Schedule..."
-                        isDisabled={selectedDistrictIds.length === 0}
-                    >
-                        <HStack spacing={2}>
-                            <FaDownload />
-                            <Text>Export Selected ({selectedDistrictIds.length})</Text>
-                        </HStack>
-                    </Button>
+                    <HStack mt="2" spacing={2} width="100%">
+                        <Button
+                            colorScheme="green"
+                            flex="1"
+                            onClick={handleExportClick}
+                            isLoading={isExporting}
+                            loadingText="Generating..."
+                            isDisabled={selectedDistrictIds.length === 0}
+                        >
+                            <HStack spacing={2}>
+                                <FaDownload />
+                                <Text>Export ({selectedDistrictIds.length})</Text>
+                            </HStack>
+                        </Button>
+
+                        <Tooltip label="Clear Selection">
+                            <IconButton
+                                icon={<FaEraser />}
+                                colorScheme="red"
+                                variant="outline"
+                                onClick={handleClearSelection}
+                                isDisabled={selectedDistrictIds.length === 0}
+                                aria-label="Clear Selection"
+                            />
+                        </Tooltip>
+                    </HStack>
 
                     <Text mt="2" fontSize="sm" color="gray.600" noOfLines={3}>
                         Selected: **{selectedDistrictNames || 'None'}**
@@ -450,7 +468,7 @@ const Globe = () => {
                                             isChecked={isSelected}
                                             onChange={() => toggleDistrictSelection(district.id, district)}
                                             colorScheme="whiteAlpha"
-                                            onClick={(e) => e.stopPropagation()} 
+                                            onClick={(e) => e.stopPropagation()}
                                         />
                                         <Text fontSize="md" fontWeight="medium">{district.name}</Text>
                                     </HStack>
@@ -503,7 +521,7 @@ const Globe = () => {
                 position="absolute"
                 top={['10px', '20px']}
                 right={['10px', '20px']}
-                width={['95%', '300px']} 
+                width={['95%', '300px']}
                 bg="white"
                 boxShadow="xl"
                 borderRadius="10px"
@@ -546,8 +564,8 @@ const Globe = () => {
                             {/* 💡 Show context-aware empty message */}
                             {filteredCongregations.length === 0 && (
                                 <Text color="gray.500" p="2">
-                                    {searchCongregation 
-                                        ? "No congregations match search." 
+                                    {searchCongregation
+                                        ? "No congregations match search."
                                         : "Select a district to view congregations."}
                                 </Text>
                             )}
