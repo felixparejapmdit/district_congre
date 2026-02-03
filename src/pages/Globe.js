@@ -26,13 +26,18 @@ import {
     useBreakpointValue,
     Divider,
     Flex,
+    Menu,
+    MenuButton,
+    MenuList,
+    MenuItem,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import "../styles.css";
-import { FaCheckSquare, FaRegSquare, FaDownload, FaEraser, FaBars, FaMapMarkerAlt, FaGlobeAsia } from "react-icons/fa";
+import { FaCheckSquare, FaRegSquare, FaDownload, FaEraser, FaBars, FaMapMarkerAlt, FaGlobeAsia, FaCog, FaBuilding, FaChurch } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 
 // 📌 Custom Marker Icon
 const markerIcon = new L.Icon({
@@ -281,6 +286,7 @@ const RightPanelContent = ({
 // --- MAIN COMPONENT ---
 
 const Globe = () => {
+    const navigate = useNavigate();
     // --- State ---
     const [districts, setDistricts] = useState([]);
     const [selectedDistrictIds, setSelectedDistrictIds] = useState([]);
@@ -643,6 +649,30 @@ const Globe = () => {
                     />
                 </Box>
             )}
+
+            {/* ⚙️ SETTINGS BUTTON */}
+            <Box position="absolute" top={4} right={4} zIndex="1000">
+                <Menu>
+                    <MenuButton
+                        as={IconButton}
+                        aria-label="Options"
+                        icon={<FaCog />}
+                        variant="solid"
+                        colorScheme="blue"
+                        size="lg"
+                        borderRadius="full"
+                        boxShadow="lg"
+                    />
+                    <MenuList zIndex="1001">
+                        <MenuItem icon={<FaBuilding />} onClick={() => navigate('/districts')}>
+                            Manage Districts
+                        </MenuItem>
+                        <MenuItem icon={<FaChurch />} onClick={() => navigate('/local-congregations')}>
+                            Manage Local Congregations
+                        </MenuItem>
+                    </MenuList>
+                </Menu>
+            </Box>
 
             {/* 🗓️ SCHEDULE MODAL */}
             <Modal isOpen={isScheduleOpen} onClose={closeSchedule} size="xl" isCentered>

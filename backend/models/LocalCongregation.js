@@ -23,6 +23,18 @@ const LocalCongregation = sequelize.define(
       type: DataTypes.STRING(100),
       allowNull: false,
     },
+    latitude: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    longitude: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    address: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
   },
   {
     tableName: "local_congregation",

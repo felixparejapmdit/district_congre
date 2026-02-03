@@ -21,6 +21,14 @@ const District = sequelize.define(
       type: DataTypes.STRING(20),
       allowNull: true,
     },
+    latitude: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    longitude: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
   },
   {
     tableName: "districts",

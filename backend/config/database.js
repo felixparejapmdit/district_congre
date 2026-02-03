@@ -11,7 +11,7 @@ const sequelize = new Sequelize(
   process.env.MYSQL_USER,     // Database user (discongre)
   process.env.MYSQL_PASSWORD, // Database password (M@sunur1n)
   {
-    host: process.env.MYSQL_HOST || "inc-db", // Defaults to the Docker service name
+    host: process.env.MYSQL_HOST || "localhost", // Defaults to localhost for non-docker
     port: process.env.MYSQL_PORT || 3306,
     dialect: "mysql",
     logging: process.env.NODE_ENV === "development" ? console.log : false,
