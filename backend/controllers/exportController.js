@@ -151,3 +151,49 @@ exports.exportSchedule = async (req, res) => {
         res.status(500).send({ message: "Failed to generate export file.", error: err.message });
     }
 };
+
+// ------------------------------
+// 🟢 Generate Excel from JSON Data (New for Frontend-led progress)
+// ------------------------------
+exports.generateExcelFromJson = async (req, res) => {
+    const { data } = req.body;
+    if (!data || !Array.isArray(data)) {
+        return res.status(400).send({ message: "Invalid data format." });
+    }
+
+    try {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Worship Schedules');
+
+        worksheet.columns = [
+            { header: 'District', key: 'district', width: 25 },
+            { header: 'Local Congregation', key: 'congregation', width: 35 },
+            { header: 'Wednesday', key: 'wednesday', width: 40 },
+            { header: 'Thursday', key: 'thursday', width: 40 },
+            { header: 'Saturday', key: 'saturday', width: 40 },
+            { header: 'Sunday', key: 'sunday', width: 40 },
+        ];
+        worksheet.getRow(1).font = { bold: true, size: 12 };
+
+        data.forEach(item => {
+            worksheet.addRow({
+                district: item.district || 'N/A',
+                congregation: item.congregation,
+                wednesday: item.wednesday || '',
+                thursday: item.thursday || '',
+                saturday: item.saturday || '',
+                sunday: item.sunday || '',
+            });
+        });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', 'attachment; filename=worship_schedules_export.xlsx');
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (err) {
+        console.error("Manual Export failed:", err);
+        res.status(500).send({ message: "Failed to generate export file." });
+    }
+};
+

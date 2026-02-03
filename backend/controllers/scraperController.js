@@ -3,9 +3,12 @@ const cheerio = require("cheerio");
 
 // 🟢 Scrape Worship Service Schedule (Using Axios + Cheerio)
 const scrapeCongregationSchedule = async (req, res) => {
+  // Sanitize and format the congregation name for the URL
   const congregation = req.params.congregation
-    .replace(/\s+/g, "-") // Replace spaces with "-"
-    .replace(/[.,]/g, ""); // Remove both dots (.) and commas (,)
+    .toLowerCase()
+    .replace(/'/g, "") // Remove single quotes/apostrophes
+    .replace(/[.,]/g, "") // Remove dots and commas
+    .replace(/\s+/g, "-"); // Replace spaces with dashes
 
   const url = `https://directory.iglesianicristo.net/locales/${congregation}`;
 
@@ -31,7 +34,7 @@ const scrapeCongregationSchedule = async (req, res) => {
     // ✅ Get the last schedule container (latest schedule)
     const lastContainer = containers.last().html();
 
-console.log(lastContainer);
+    console.log(lastContainer);
     res.json({
       congregation,
       schedule: `<div class="schedule-container">${lastContainer}</div>`,
