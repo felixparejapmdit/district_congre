@@ -20,6 +20,6 @@ echo -e "\033[0;32mDeploying to Production using '$DOCKER_COMPOSE'...\033[0m"
 $DOCKER_COMPOSE -f docker-compose.prod.yml down
 
 # Up with build, using the proxmox env file
-$DOCKER_COMPOSE -f docker-compose.prod.yml --env-file .env.proxmox up -d --build
+$DOCKER_COMPOSE -f docker-compose.prod.yml --env-file .env up -d --build
 
 echo -e "\033[0;36mDeployment command sent. Check logs with: $DOCKER_COMPOSE -f docker-compose.prod.yml logs -f\033[0m"

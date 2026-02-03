@@ -1,13 +1,31 @@
 version: '3.8'
 
 services:
+  # Database Service (Added as requested)
+  inc-db:
+    image: mysql:8.0
+    container_name: inc-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - inc_mysql_data:/var/lib/mysql
+    env_file: .env
+    # Use host network to match other services
+    network_mode: "host"
+
   inc-backend:
     build: ./backend
     container_name: inc-backend
     restart: always
-    env_file: .env.proxmox
-    # Use host network to avoid LXC permission issues with network namespaces
+    env_file: .env
+    # Use host network to avoid LXC permission issues
     network_mode: "host"
+    depends_on:
+      - inc-db
 
   inc-frontend:
     build:
@@ -16,10 +34,13 @@ services:
         - REACT_APP_API_URL=${REACT_APP_API_URL}
     container_name: inc-frontend
     restart: always
-    # Use host network to avoid LXC permission issues with network namespaces
+    # Use host network to avoid LXC permission issues
     network_mode: "host"
     volumes:
       - ./nginx/certs:/etc/nginx/certs:ro
       - ./nginx/default.prod.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - inc-backend
+
+volumes:
+  inc_mysql_data:
