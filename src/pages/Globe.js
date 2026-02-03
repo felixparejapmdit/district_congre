@@ -540,12 +540,17 @@ const Globe = () => {
             const exportPromise = axios.post(`${API_URL}/api/export-schedule`, { districtIds: selectedDistrictIds }, { responseType: 'blob' });
 
             // 3. Simulate progress
+            let exportDone = false;
+            exportPromise.then(() => exportDone = true).catch(() => exportDone = true);
+
             for (let i = 0; i < total; i++) {
+                if (exportDone) break; // Snappy finish if backend is faster than simulation
+
                 const cong = listRes.data[i];
                 setExportStatus(`[${i + 1}/${total}] Scraping: ${cong.name}`);
                 setExportProgress(Math.floor((i / total) * 95));
 
-                await new Promise(r => setTimeout(r, total > 50 ? 300 : 700));
+                await new Promise(r => setTimeout(r, total > 50 ? 250 : 600));
             }
 
             setExportStatus("Finalizing Excel file...");
