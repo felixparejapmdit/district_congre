@@ -11,7 +11,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - inc_mysql_data:/var/lib/mysql
-    env_file: .env
+    env_file: .env.proxmox
     # Use host network to match other services
     network_mode: "host"
 
@@ -19,7 +19,7 @@ services:
     build: ./backend
     container_name: inc-backend
     restart: always
-    env_file: .env
+    env_file: .env.proxmox
     environment:
       - PORT=3001
     # Use host network to avoid LXC permission issues
