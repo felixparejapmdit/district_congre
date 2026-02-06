@@ -17,12 +17,12 @@ fi
 echo -e "\033[0;32mDeploying to Production using '$DOCKER_COMPOSE'...\033[0m"
 
 # 🟢 FIX: Avoid DNS timeout errors on Proxmox/LXC
-echo -e "\033[0;33mConfiguring DNS (8.8.8.8) to prevent image pull timeouts...\033[0m"
-echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+# echo -e "\033[0;33mConfiguring DNS (8.8.8.8) to prevent image pull timeouts...\033[0m"
+# echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
 
-echo -e "\033[0;33mRestarting Docker service...\033[0m"
-sudo systemctl restart docker
-sleep 2 # Give docker a moment to breath
+# echo -e "\033[0;33mRestarting Docker service...\033[0m"
+# sudo systemctl restart docker
+# sleep 2 # Give docker a moment to breath
 
 # Bring down existing containers to ensure a clean slate
 $DOCKER_COMPOSE -f docker-compose.prod.yml down
