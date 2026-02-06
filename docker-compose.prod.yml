@@ -20,6 +20,8 @@ services:
     container_name: inc-backend
     restart: always
     env_file: .env
+    environment:
+      - PORT=3001
     # Use host network to avoid LXC permission issues
     network_mode: "host"
     depends_on:

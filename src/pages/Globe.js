@@ -36,7 +36,8 @@ import {
     CircularProgress,
     CircularProgressLabel,
     Portal,
-    Badge
+    Badge,
+    useToast,
 } from "@chakra-ui/react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -304,6 +305,7 @@ const RightPanelContent = ({
 
 const Globe = () => {
     const navigate = useNavigate();
+    const toast = useToast();
     // --- State ---
     const [districts, setDistricts] = useState([]);
     const [selectedDistrictIds, setSelectedDistrictIds] = useState([]);
@@ -511,7 +513,18 @@ const Globe = () => {
 
     // Export Logic
     const handleExportClick = () => {
-        if (selectedDistrictIds.length === 0) return alert("Select at least one district.");
+        if (selectedDistrictIds.length === 0) {
+            toast({
+                title: "Selection Required",
+                description: "Please select at least one district to export.",
+                status: "warning",
+                duration: 3000,
+                position: "top-right",
+                variant: "left-accent",
+                isClosable: true
+            });
+            return;
+        }
         openConfirm();
     };
 
@@ -529,7 +542,15 @@ const Globe = () => {
             const total = listRes.data.length;
 
             if (total === 0) {
-                alert("No congregations found.");
+                toast({
+                    title: "No Data Found",
+                    description: "No congregations found for the selected districts.",
+                    status: "info",
+                    duration: 3000,
+                    position: "top-right",
+                    variant: "left-accent",
+                    isClosable: true
+                });
                 setIsExporting(false);
                 return;
             }
@@ -568,7 +589,15 @@ const Globe = () => {
 
         } catch (e) {
             console.error("Export error:", e);
-            alert("Export failed.");
+            toast({
+                title: "Export Failed",
+                description: "An error occurred during export. Please try again.",
+                status: "error",
+                duration: 4000,
+                position: "top-right",
+                variant: "left-accent",
+                isClosable: true
+            });
             setIsExporting(false);
         }
     };

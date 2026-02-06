@@ -22,4 +22,5 @@ $DOCKER_COMPOSE -f docker-compose.yml down
 # Up with build, using the standard .env file
 $DOCKER_COMPOSE -f docker-compose.yml --env-file .env up -d --build
 
-echo -e "\033[0;36mLocal deployment command sent. Check logs with: $DOCKER_COMPOSE -f docker-compose.yml logs -f\033[0m"
+echo -e "\033[0;36mLocal deployment complete! App accessible at http://localhost:8080\033[0m"
+echo -e "\033[0;36mCheck logs with: $DOCKER_COMPOSE -f docker-compose.yml logs -f\033[0m"

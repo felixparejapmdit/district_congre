@@ -33,7 +33,13 @@ import {
   Skeleton,
   ButtonGroup,
   Tooltip,
-  useColorModeValue
+  useColorModeValue,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
 } from "@chakra-ui/react";
 import {
   FaEdit,
@@ -73,6 +79,14 @@ const Districts = () => {
 
   // UI Hooks
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const cancelRef = React.useRef();
+  const {
+    isOpen: isDeleteOpen,
+    onOpen: onDeleteOpen,
+    onClose: onDeleteClose
+  } = useDisclosure();
+  const [deletingId, setDeletingId] = useState(null);
+
   const cardBg = useColorModeValue("white", "gray.700");
   const API_URL = process.env.REACT_APP_API_URL || "";
 
@@ -83,7 +97,15 @@ const Districts = () => {
       const response = await axios.get(`${API_URL}/api/districts`);
       setDistricts(response.data);
     } catch (error) {
-      toast({ title: "Error fetching districts", status: "error", duration: 3000 });
+      toast({
+        title: "Error fetching districts",
+        description: "Please check your connection.",
+        status: "error",
+        duration: 4000,
+        position: "top-right",
+        variant: "left-accent",
+        isClosable: true,
+      });
     } finally {
       setLoading(false);
     }
@@ -125,27 +147,72 @@ const Districts = () => {
     try {
       if (editingDistrict) {
         await axios.put(`${API_URL}/api/districts/${editingDistrict.id}`, formData);
-        toast({ title: "Updated successfully", status: "success", duration: 2000 });
+        toast({
+          title: "District Updated",
+          description: `${formData.name} has been updated successfully.`,
+          status: "success",
+          duration: 3000,
+          position: "top-right",
+          variant: "left-accent",
+          isClosable: true,
+        });
       } else {
         await axios.post(`${API_URL}/api/districts`, formData);
-        toast({ title: "Created successfully", status: "success", duration: 2000 });
+        toast({
+          title: "District Created",
+          description: `${formData.name} has been added to the system.`,
+          status: "success",
+          duration: 3000,
+          position: "top-right",
+          variant: "left-accent",
+          isClosable: true,
+        });
       }
       fetchDistricts();
       onClose();
     } catch (error) {
-      toast({ title: "Operation failed", status: "error", duration: 3000 });
+      toast({
+        title: "Operation Failed",
+        description: "An error occurred while saving. Please try again.",
+        status: "error",
+        duration: 4000,
+        position: "top-right",
+        variant: "left-accent",
+        isClosable: true,
+      });
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this district?")) return;
+  const confirmDelete = async () => {
+    if (!deletingId) return;
     try {
-      await axios.delete(`${API_URL}/api/districts/${id}`);
-      toast({ title: "Deleted successfully", status: "success", duration: 2000 });
+      await axios.delete(`${API_URL}/api/districts/${deletingId}`);
+      toast({
+        title: "District Deleted",
+        status: "success",
+        duration: 3000,
+        position: "top-right",
+        variant: "left-accent",
+        isClosable: true,
+      });
       fetchDistricts();
+      onDeleteClose();
     } catch (error) {
-      toast({ title: "Delete failed", status: "error", duration: 3000 });
+      toast({
+        title: "Delete Failed",
+        description: "This district might be in use.",
+        status: "error",
+        duration: 4000,
+        position: "top-right",
+        variant: "left-accent",
+        isClosable: true,
+      });
     }
+  };
+
+  const handleDelete = (id) => {
+    setDeletingId(id);
+    onDeleteOpen();
   };
 
   const openModal = (district = null) => {
@@ -373,6 +440,62 @@ const Districts = () => {
             </ModalFooter>
           </ModalContent>
         </Modal>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog
+          isOpen={isDeleteOpen}
+          leastDestructiveRef={cancelRef}
+          onClose={onDeleteClose}
+          isCentered
+        >
+          <AlertDialogOverlay backdropFilter="blur(2px)">
+            <AlertDialogContent borderRadius="lg">
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete District
+              </AlertDialogHeader>
+
+              <AlertDialogBody>
+                Are you sure? This action cannot be undone.
+              </AlertDialogBody>
+
+              <AlertDialogFooter>
+                <Button ref={cancelRef} onClick={onDeleteClose} size="sm">
+                  Cancel
+                </Button>
+                <Button colorScheme="red" onClick={confirmDelete} ml={3} size="sm">
+                  Delete
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog
+          isOpen={isDeleteOpen}
+          leastDestructiveRef={cancelRef}
+          onClose={onDeleteClose}
+          isCentered
+        >
+          <AlertDialogOverlay backdropFilter="blur(2px)">
+            <AlertDialogContent borderRadius="lg">
+              <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                Delete District
+              </AlertDialogHeader>
+
+              <AlertDialogBody>
+                Are you sure? This action cannot be undone.
+              </AlertDialogBody>
+
+              <AlertDialogFooter>
+                <Button ref={cancelRef} onClick={onDeleteClose} size="sm">
+                  Cancel
+                </Button>
+                <Button colorScheme="red" onClick={confirmDelete} ml={3} size="sm">
+                  Delete
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialogOverlay>
+        </AlertDialog>
       </Container>
     </Box>
   );

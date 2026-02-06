@@ -1,5 +1,5 @@
 # Stage 1: Build React
-FROM node:20-alpine as build-stage
+FROM node:20-alpine AS build-stage
 WORKDIR /app
 
 # Pass the API URL from docker-compose/env during build time

@@ -34,7 +34,13 @@ import {
     Skeleton,
     ButtonGroup,
     Tooltip,
-    useColorModeValue
+    useColorModeValue,
+    AlertDialog,
+    AlertDialogBody,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogContent,
+    AlertDialogOverlay,
 } from "@chakra-ui/react";
 import {
     FaEdit,
@@ -76,6 +82,14 @@ const LocalCongregations = () => {
 
     // UI Hooks
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const cancelRef = React.useRef();
+    const {
+        isOpen: isDeleteOpen,
+        onOpen: onDeleteOpen,
+        onClose: onDeleteClose
+    } = useDisclosure();
+    const [deletingId, setDeletingId] = useState(null);
+
     const cardBg = useColorModeValue("white", "gray.700");
     const API_URL = process.env.REACT_APP_API_URL || "";
 
@@ -89,7 +103,15 @@ const LocalCongregations = () => {
             setCongregations(congRes.data);
             setDistricts(distRes.data);
         } catch (error) {
-            toast({ title: "Error fetching data", status: "error", duration: 3000 });
+            toast({
+                title: "Fetch Failed",
+                description: "Could not retrieve data from server.",
+                status: "error",
+                duration: 4000,
+                position: "top-right",
+                variant: "left-accent",
+                isClosable: true
+            });
         } finally {
             setLoading(false);
         }
@@ -122,33 +144,86 @@ const LocalCongregations = () => {
     // CRUD Ops
     const handleSave = async () => {
         if (!formData.name || !formData.district_id) {
-            toast({ title: "Name and District are required", status: "warning" });
+            toast({
+                title: "Validation Warning",
+                description: "Name and District are required.",
+                status: "warning",
+                duration: 4000,
+                position: "top-right",
+                variant: "left-accent",
+                isClosable: true
+            });
             return;
         }
         try {
             if (editingCong) {
                 await axios.put(`${API_URL}/api/local-congregations/${editingCong.id}`, formData);
-                toast({ title: "Updated successfully", status: "success", duration: 2000 });
+                toast({
+                    title: "Updated Successfully",
+                    description: `${formData.name} info has been saved.`,
+                    status: "success",
+                    duration: 3000,
+                    position: "top-right",
+                    variant: "left-accent",
+                    isClosable: true
+                });
             } else {
                 await axios.post(`${API_URL}/api/local-congregations`, formData);
-                toast({ title: "Added successfully", status: "success", duration: 2000 });
+                toast({
+                    title: "Added Successfully",
+                    description: `${formData.name} is now in the directory.`,
+                    status: "success",
+                    duration: 3000,
+                    position: "top-right",
+                    variant: "left-accent",
+                    isClosable: true
+                });
             }
             fetchInitialData();
             onClose();
         } catch (error) {
-            toast({ title: "Operation failed", status: "error", duration: 3000 });
+            toast({
+                title: "Operation Failed",
+                description: "Please check your data and try again.",
+                status: "error",
+                duration: 4000,
+                position: "top-right",
+                variant: "left-accent",
+                isClosable: true
+            });
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("Delete this congregation?")) return;
+    const confirmDelete = async () => {
+        if (!deletingId) return;
         try {
-            await axios.delete(`${API_URL}/api/local-congregations/${id}`);
-            toast({ title: "Deleted", status: "success", duration: 2000 });
-            setCongregations(prev => prev.filter(c => c.id !== id));
+            await axios.delete(`${API_URL}/api/local-congregations/${deletingId}`);
+            toast({
+                title: "Congregation Deleted",
+                status: "success",
+                duration: 3000,
+                position: "top-right",
+                variant: "left-accent",
+                isClosable: true
+            });
+            setCongregations(prev => prev.filter(c => c.id !== deletingId));
+            onDeleteClose();
         } catch (error) {
-            toast({ title: "Delete failed", status: "error", duration: 3000 });
+            toast({
+                title: "Delete Failed",
+                description: "This congregation might be linked to other data.",
+                status: "error",
+                duration: 4000,
+                position: "top-right",
+                variant: "left-accent",
+                isClosable: true
+            });
         }
+    };
+
+    const handleDelete = (id) => {
+        setDeletingId(id);
+        onDeleteOpen();
     };
 
     const openModal = (cong = null) => {
@@ -402,6 +477,34 @@ const LocalCongregations = () => {
                         </ModalFooter>
                     </ModalContent>
                 </Modal>
+                {/* Delete Confirmation Dialog */}
+                <AlertDialog
+                    isOpen={isDeleteOpen}
+                    leastDestructiveRef={cancelRef}
+                    onClose={onDeleteClose}
+                    isCentered
+                >
+                    <AlertDialogOverlay backdropFilter="blur(2px)">
+                        <AlertDialogContent borderRadius="lg">
+                            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                                Delete Congregation
+                            </AlertDialogHeader>
+
+                            <AlertDialogBody>
+                                Are you sure? This action cannot be undone.
+                            </AlertDialogBody>
+
+                            <AlertDialogFooter>
+                                <Button ref={cancelRef} onClick={onDeleteClose} size="sm">
+                                    Cancel
+                                </Button>
+                                <Button colorScheme="red" onClick={confirmDelete} ml={3} size="sm">
+                                    Delete
+                                </Button>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialogOverlay>
+                </AlertDialog>
             </Container>
         </Box>
     );
