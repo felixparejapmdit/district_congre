@@ -10,6 +10,8 @@ const districtsRoutes = require("./routes/districtsRoutes");
 const localCongregationRoutes = require("./routes/localCongregationRoutes");
 const scraperRoutes = require("./routes/scraperRoutes");
 const exportRoutes = require('./routes/exportRoutes');
+const dashboardRoutes = require("./routes/dashboardRoutes");
+const syncRoutes = require("./routes/syncRoutes");
 
 const app = express();
 
@@ -29,6 +31,8 @@ app.use(scraperRoutes);
 app.use(districtsRoutes);
 app.use(localCongregationRoutes);
 app.use("/api", exportRoutes);
+app.use(dashboardRoutes);
+app.use(syncRoutes);
 
 // Start simple HTTP server (Nginx will handle the HTTPS part)
 sequelize.sync({ alter: true }).then(() => {

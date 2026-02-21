@@ -1,512 +1,337 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
     Box,
+    Flex,
+    Text,
+    VStack,
+    HStack,
+    Icon,
+    Input,
+    InputGroup,
+    InputLeftElement,
+    SimpleGrid,
+    Badge,
+    Spinner,
+    IconButton,
     Button,
     Container,
-    Flex,
-    Heading,
-    Table,
-    Thead,
-    Tbody,
-    Tr,
-    Th,
-    Td,
-    IconButton,
+    Divider,
     useDisclosure,
     Modal,
     ModalOverlay,
     ModalContent,
     ModalHeader,
-    ModalFooter,
     ModalBody,
     ModalCloseButton,
-    FormControl,
-    FormLabel,
-    Input,
-    Select,
-    useToast,
-    Text,
-    Badge,
-    Card,
-    CardBody,
-    SimpleGrid,
-    Stack,
-    Skeleton,
-    ButtonGroup,
-    Tooltip,
-    useColorModeValue,
-    AlertDialog,
-    AlertDialogBody,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogContent,
-    AlertDialogOverlay,
 } from "@chakra-ui/react";
-import {
-    FaEdit,
-    FaTrash,
-    FaPlus,
-    FaHome,
-    FaChevronLeft,
-    FaChevronRight,
-    FaSyncAlt,
-    FaFilter,
-    FaMapMarkerAlt,
-    FaList,
-    FaTh
-} from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import {
+    FaSearch,
+    FaMapMarkerAlt,
+    FaArrowLeft,
+    FaClock,
+    FaCar,
+    FaGlobeAsia,
+    FaCalendarAlt,
+    FaInfoCircle
+} from "react-icons/fa";
 import axios from "axios";
+
+const API_BASE = "http://localhost:3001/api";
+const CENTRAL_OFFICE = { lat: 14.6508, lng: 121.0505 };
 
 const LocalCongregations = () => {
     const navigate = useNavigate();
-    const toast = useToast();
-
-    // State
     const [congregations, setCongregations] = useState([]);
-    const [districts, setDistricts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [editingCong, setEditingCong] = useState(null);
-    const [formData, setFormData] = useState({
-        name: "", district_id: "", latitude: "", longitude: "", address: ""
-    });
-
-    // View Item State (true = grid, false = list)
-    const [isGridView, setIsGridView] = useState(false);
-
-    // Search & Filter State
     const [searchTerm, setSearchTerm] = useState("");
-    const [filterDistrict, setFilterDistrict] = useState("");
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = isGridView ? 20 : 25; // Fit more in scrollable view
-
-    // UI Hooks
+    const [selectedLocale, setSelectedLocale] = useState(null);
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const cancelRef = React.useRef();
-    const {
-        isOpen: isDeleteOpen,
-        onOpen: onDeleteOpen,
-        onClose: onDeleteClose
-    } = useDisclosure();
-    const [deletingId, setDeletingId] = useState(null);
-
-    const cardBg = useColorModeValue("white", "gray.700");
-    const envApiUrl = process.env.REACT_APP_API_URL || "";
-    const API_URL = envApiUrl === "/" ? "" : envApiUrl;
-
-    const fetchInitialData = async () => {
-        setLoading(true);
-        try {
-            const [congRes, distRes] = await Promise.all([
-                axios.get(`${API_URL}/api/all-congregations`),
-                axios.get(`${API_URL}/api/districts`)
-            ]);
-            setCongregations(congRes.data);
-            setDistricts(distRes.data);
-        } catch (error) {
-            toast({
-                title: "Fetch Failed",
-                description: "Could not retrieve data from server.",
-                status: "error",
-                duration: 4000,
-                position: "top-right",
-                variant: "left-accent",
-                isClosable: true
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
 
     useEffect(() => {
-        fetchInitialData();
+        const fetchData = async () => {
+            try {
+                const { data } = await axios.get(`${API_BASE}/all-congregations`);
+                setCongregations(data);
+            } catch (error) {
+                console.error("Error fetching congregations:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
     }, []);
 
-    // Filter Logic
+    // Haversine Formula for Distance calculation
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+        if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+        const R = 6371; // Radius of the earth in km
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return (R * c).toFixed(1);
+    };
+
+    // Estimate Travel Time (assuming 30km/h average traffic speed)
+    const estimateTravelTime = (distance) => {
+        if (!distance) return null;
+        const speed = 30; // km/h
+        const timeInHours = distance / speed;
+        const minutes = Math.round(timeInHours * 60);
+
+        if (minutes < 60) return `${minutes} mins`;
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        return `${hours}h ${remainingMinutes}m`;
+    };
+
     const filteredCongregations = useMemo(() => {
-        return congregations.filter(c => {
-            const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesDistrict = filterDistrict ? c.district_id === parseInt(filterDistrict) : true;
-            return matchesSearch && matchesDistrict;
-        });
-    }, [congregations, searchTerm, filterDistrict]);
+        return congregations.filter(c =>
+            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.District?.name.toLowerCase().includes(searchTerm.toLowerCase())
+        ).slice(0, 50); // Limit to top 50 for performance
+    }, [congregations, searchTerm]);
 
-    // Pagination Logic
-    const totalPages = Math.ceil(filteredCongregations.length / itemsPerPage);
-    const currentData = filteredCongregations.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
-
-    const handlePageChange = (newPage) => {
-        if (newPage >= 1 && newPage <= totalPages) setCurrentPage(newPage);
-    };
-
-    // CRUD Ops
-    const handleSave = async () => {
-        if (!formData.name || !formData.district_id) {
-            toast({
-                title: "Validation Warning",
-                description: "Name and District are required.",
-                status: "warning",
-                duration: 4000,
-                position: "top-right",
-                variant: "left-accent",
-                isClosable: true
-            });
-            return;
-        }
-        try {
-            if (editingCong) {
-                await axios.put(`${API_URL}/api/local-congregations/${editingCong.id}`, formData);
-                toast({
-                    title: "Updated Successfully",
-                    description: `${formData.name} info has been saved.`,
-                    status: "success",
-                    duration: 3000,
-                    position: "top-right",
-                    variant: "left-accent",
-                    isClosable: true
-                });
-            } else {
-                await axios.post(`${API_URL}/api/local-congregations`, formData);
-                toast({
-                    title: "Added Successfully",
-                    description: `${formData.name} is now in the directory.`,
-                    status: "success",
-                    duration: 3000,
-                    position: "top-right",
-                    variant: "left-accent",
-                    isClosable: true
-                });
-            }
-            fetchInitialData();
-            onClose();
-        } catch (error) {
-            toast({
-                title: "Operation Failed",
-                description: "Please check your data and try again.",
-                status: "error",
-                duration: 4000,
-                position: "top-right",
-                variant: "left-accent",
-                isClosable: true
-            });
-        }
-    };
-
-    const confirmDelete = async () => {
-        if (!deletingId) return;
-        try {
-            await axios.delete(`${API_URL}/api/local-congregations/${deletingId}`);
-            toast({
-                title: "Congregation Deleted",
-                status: "success",
-                duration: 3000,
-                position: "top-right",
-                variant: "left-accent",
-                isClosable: true
-            });
-            setCongregations(prev => prev.filter(c => c.id !== deletingId));
-            onDeleteClose();
-        } catch (error) {
-            toast({
-                title: "Delete Failed",
-                description: "This congregation might be linked to other data.",
-                status: "error",
-                duration: 4000,
-                position: "top-right",
-                variant: "left-accent",
-                isClosable: true
-            });
-        }
-    };
-
-    const handleDelete = (id) => {
-        setDeletingId(id);
-        onDeleteOpen();
-    };
-
-    const openModal = (cong = null) => {
-        setEditingCong(cong);
-        setFormData(cong ? {
-            name: cong.name,
-            district_id: cong.district_id,
-            latitude: cong.latitude || "",
-            longitude: cong.longitude || "",
-            address: cong.address || ""
-        } : {
-            name: "", district_id: "", latitude: "", longitude: "", address: ""
-        });
+    const handleViewDetails = (locale) => {
+        setSelectedLocale(locale);
         onOpen();
     };
 
-    const getDistrictName = (id) => {
-        const d = districts.find(d => d.id === id);
-        return d ? d.name : "Unknown";
-    };
+    const cardBg = "rgba(255, 255, 255, 0.15)";
+    const blurEffect = "blur(15px)";
 
     return (
-        <Box h="100vh" bg="gray.50" display="flex" flexDirection="column" overflow="hidden">
-            {/* 🟢 FIXED HEADER */}
-            <Box bg="white" shadow="sm" borderBottom="1px solid" borderColor="gray.200" py={2} flexShrink={0} zIndex={10}>
-                <Container maxW="full" px={{ base: 2, md: 6 }}>
-                    <Flex justify="space-between" align="center" gap={4} wrap="wrap">
-                        <Flex align="center" gap={3} flexShrink={0}>
-                            <IconButton
-                                icon={<FaHome />}
-                                variant="ghost"
-                                onClick={() => navigate("/")}
-                                aria-label="Home"
-                                size="sm"
-                            />
-                            <Heading size="md" color="gray.800" display="flex" alignItems="center" gap={2}>
-                                Congregations
-                                <Badge colorScheme="purple" fontSize="0.8em" borderRadius="full">{congregations.length}</Badge>
-                            </Heading>
+        <Box
+            w="100%"
+            h="100vh"
+            backgroundImage="url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')"
+            backgroundSize="cover"
+            backgroundPosition="center"
+            position="relative"
+            overflow="hidden"
+            color="white"
+        >
+            {/* Background Overlay */}
+            <Box
+                position="absolute"
+                top="0"
+                left="0"
+                w="100%"
+                h="100%"
+                bgGradient="linear(to-br, rgba(0,0,0,0.8), rgba(0,0,0,0.4))"
+                backdropFilter="brightness(0.5)"
+            />
+
+            <Flex
+                position="relative"
+                zIndex="1"
+                direction="column"
+                h="100%"
+            >
+                {/* Header */}
+                <Box p={6} borderBottom="1px solid rgba(255, 255, 255, 0.1)">
+                    <Container maxW="1200px">
+                        <Flex justify="space-between" align="center">
+                            <HStack spacing={4}>
+                                <IconButton
+                                    icon={<FaArrowLeft />}
+                                    onClick={() => navigate("/")}
+                                    variant="ghost"
+                                    colorScheme="whiteAlpha"
+                                    borderRadius="full"
+                                    aria-label="Back"
+                                />
+                                <VStack align="start" spacing={0}>
+                                    <Text fontSize="2xl" fontWeight="black" letterSpacing="tight">
+                                        CONGREGATION SEARCH
+                                    </Text>
+                                    <Text color="blue.300" fontSize="xs" fontWeight="bold">
+                                        GLOBAL DIRECTORY & DISTANCE TRACKER
+                                    </Text>
+                                </VStack>
+                            </HStack>
+                            <Badge colorScheme="blue" borderRadius="full" px={3} py={1} fontSize="xs">
+                                {congregations.length} TOTAL LOCALES
+                            </Badge>
                         </Flex>
 
-                        <Flex gap={2} align="center" flexWrap="nowrap" overflowX="auto" pb={{ base: 1, md: 0 }}>
-                            {/* Search & Filters Compact */}
+                        <InputGroup mt={6} size="lg">
+                            <InputLeftElement pointerEvents="none">
+                                <FaSearch color="rgba(255,255,255,0.4)" />
+                            </InputLeftElement>
                             <Input
-                                placeholder="Search..."
+                                placeholder="Search by name or district..."
+                                bg="rgba(255, 255, 255, 0.1)"
+                                border="1px solid rgba(255, 255, 255, 0.2)"
+                                _hover={{ bg: "rgba(255, 255, 255, 0.15)" }}
+                                _focus={{ border: "1px solid", borderColor: "blue.400", bg: "rgba(255, 255, 255, 0.2)" }}
+                                backdropFilter="blur(10px)"
                                 value={searchTerm}
-                                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                                size="sm"
-                                w={{ base: "120px", md: "200px" }}
-                                variant="filled"
-                                borderRadius="md"
+                                onChange={(e) => setSearchTerm(e.target.value)}
                             />
-                            <Select
-                                placeholder="Districts"
-                                value={filterDistrict}
-                                onChange={(e) => { setFilterDistrict(e.target.value); setCurrentPage(1); }}
-                                size="sm"
-                                w={{ base: "100px", md: "150px" }}
-                                variant="filled"
-                                borderRadius="md"
-                                icon={<FaFilter />}
-                            >
-                                {districts.map(d => (
-                                    <option key={d.id} value={d.id}>{d.name}</option>
-                                ))}
-                            </Select>
+                        </InputGroup>
+                    </Container>
+                </Box>
 
-                            <ButtonGroup isAttached variant="outline" size="xs">
-                                <IconButton
-                                    aria-label="List View"
-                                    icon={<FaList />}
-                                    colorScheme={!isGridView ? "purple" : "gray"}
-                                    variant={!isGridView ? "solid" : "outline"}
-                                    onClick={() => setIsGridView(false)}
-                                />
-                                <IconButton
-                                    aria-label="Grid View"
-                                    icon={<FaTh />}
-                                    colorScheme={isGridView ? "purple" : "gray"}
-                                    variant={isGridView ? "solid" : "outline"}
-                                    onClick={() => setIsGridView(true)}
-                                />
-                            </ButtonGroup>
-
-                            <Tooltip label="Refresh">
-                                <IconButton size="sm" icon={<FaSyncAlt />} onClick={fetchInitialData} aria-label="Refresh" variant="ghost" />
-                            </Tooltip>
-                            <Button size="sm" leftIcon={<FaPlus />} colorScheme="blue" onClick={() => openModal()} display={{ base: "none", sm: "flex" }}>
-                                New
-                            </Button>
-                            <IconButton size="sm" icon={<FaPlus />} colorScheme="blue" onClick={() => openModal()} display={{ base: "flex", sm: "none" }} aria-label="New" />
-                        </Flex>
-                    </Flex>
-                </Container>
-            </Box>
-
-            {/* 🟡 SCROLLABLE CONTENT */}
-            <Container maxW="full" px={{ base: 2, md: 6 }} flex="1" display="flex" flexDirection="column" overflow="hidden" py={4}>
-                {loading ? (
-                    <Stack spacing={2}>
-                        {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} height="40px" borderRadius="md" />)}
-                    </Stack>
-                ) : (
-                    <Box flex="1" display="flex" flexDirection="column" overflow="hidden">
-                        <Box flex="1" overflowY="auto" pr={1} pb={2} css={{
-                            '&::-webkit-scrollbar': { width: '6px' },
-                            '&::-webkit-scrollbar-track': { background: '#f1f1f1' },
-                            '&::-webkit-scrollbar-thumb': { background: '#c1c1c1', borderRadius: '4px' },
-                            '&::-webkit-scrollbar-thumb:hover': { background: '#a8a8a8' },
-                        }}>
-                            {isGridView ? (
-                                // GRID VIEW
-                                <SimpleGrid columns={{ base: 1, sm: 2, md: 3, lg: 5, xl: 6 }} spacing={3}>
-                                    {currentData.map((c) => (
-                                        <Card key={c.id} bg={cardBg} shadow="sm" _hover={{ shadow: "md" }} transition="all 0.2s" size="sm" borderWidth="1px" borderColor="gray.100">
-                                            <CardBody>
-                                                <Heading size="xs" color="blue.600" mb={1} noOfLines={1} title={c.name}>{c.name}</Heading>
-                                                <Badge mb={2} colorScheme="purple" fontSize="0.7em" noOfLines={1}>{getDistrictName(c.district_id)}</Badge>
-                                                <Text fontSize="xs" color="gray.500" display="flex" alignItems="center" gap={1} mb={3}>
-                                                    <FaMapMarkerAlt /> {c.latitude && c.longitude ? 'Set' : 'N/A'}
-                                                </Text>
-                                                <Flex justify="flex-end" gap={1}>
-                                                    <IconButton size="xs" icon={<FaEdit />} onClick={() => openModal(c)} aria-label="Edit" variant="ghost" colorScheme="yellow" />
-                                                    <IconButton size="xs" icon={<FaTrash />} colorScheme="red" onClick={() => handleDelete(c.id)} aria-label="Delete" variant="ghost" />
-                                                </Flex>
-                                            </CardBody>
-                                        </Card>
-                                    ))}
-                                    {currentData.length === 0 && <Text textAlign="center" gridColumn="1/-1" color="gray.500" mt={10}>No congregations found.</Text>}
-                                </SimpleGrid>
-                            ) : (
-                                // LIST VIEW
-                                <Box bg="white" borderRadius="md" shadow="sm" border="1px solid" borderColor="gray.200" overflowX="auto">
-                                    <Table variant="simple" size="sm">
-                                        <Thead bg="gray.50" position="sticky" top={0} zIndex={1} shadow="sm">
-                                            <Tr>
-                                                <Th py={3}>Name</Th>
-                                                <Th>District</Th>
-                                                <Th>Coords</Th>
-                                                <Th isNumeric>Actions</Th>
-                                            </Tr>
-                                        </Thead>
-                                        <Tbody>
-                                            {currentData.map((c) => (
-                                                <Tr key={c.id} _hover={{ bg: "blue.50" }}>
-                                                    <Td py={2} fontWeight="medium" color="blue.600">{c.name}</Td>
-                                                    <Td py={2}><Badge colorScheme="purple" variant="outline" fontSize="xs">{getDistrictName(c.district_id)}</Badge></Td>
-                                                    <Td py={2} fontSize="xs" color="gray.500">
-                                                        {c.latitude && c.longitude ? `${c.latitude}, ${c.longitude}` : <Text color="gray.300">N/A</Text>}
-                                                    </Td>
-                                                    <Td py={2} isNumeric>
-                                                        <ButtonGroup size="xs" variant="ghost">
-                                                            <IconButton icon={<FaEdit />} colorScheme="blue" onClick={() => openModal(c)} aria-label="Edit" />
-                                                            <IconButton icon={<FaTrash />} colorScheme="red" onClick={() => handleDelete(c.id)} aria-label="Delete" />
-                                                        </ButtonGroup>
-                                                    </Td>
-                                                </Tr>
-                                            ))}
-                                            {currentData.length === 0 && <Tr><Td colSpan={4} textAlign="center" py={10} color="gray.500">No data matches your filters.</Td></Tr>}
-                                        </Tbody>
-                                    </Table>
-                                </Box>
-                            )}
-                        </Box>
-
-                        {/* FIXED FOOTER */}
-                        <Flex justify="space-between" align="center" pt={3} borderTop="1px solid" borderColor="gray.200" bg="gray.50" flexShrink={0}>
-                            <Text fontSize="xs" color="gray.500">
-                                {currentData.length} records
-                            </Text>
-                            <Flex align="center" gap={2}>
-                                <Text fontSize="xs" color="gray.500" mr={2}>
-                                    Pg {currentPage}/{totalPages}
-                                </Text>
-                                <ButtonGroup size="xs" isAttached variant="outline" bg="white">
-                                    <IconButton
-                                        icon={<FaChevronLeft />}
-                                        onClick={() => handlePageChange(currentPage - 1)}
-                                        isDisabled={currentPage === 1}
-                                        aria-label="Previous"
-                                    />
-                                    <IconButton
-                                        icon={<FaChevronRight />}
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        isDisabled={currentPage === totalPages}
-                                        aria-label="Next"
-                                    />
-                                </ButtonGroup>
+                {/* Content */}
+                <Box flex="1" overflowY="auto" p={6}>
+                    <Container maxW="1200px">
+                        {loading ? (
+                            <Flex justify="center" align="center" h="50vh">
+                                <VStack spacing={4}>
+                                    <Spinner size="xl" color="blue.400" thickness="4px" />
+                                    <Text fontWeight="bold" color="blue.300">Scanning Database...</Text>
+                                </VStack>
                             </Flex>
-                        </Flex>
+                        ) : (
+                            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                                <AnimatePresence>
+                                    {filteredCongregations.map((c, i) => {
+                                        const dist = calculateDistance(CENTRAL_OFFICE.lat, CENTRAL_OFFICE.lng, c.latitude, c.longitude);
+                                        const time = estimateTravelTime(parseFloat(dist));
+
+                                        return (
+                                            <Box
+                                                key={c.id}
+                                                as={motion.div}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: i * 0.05 }}
+                                                whileHover={{ y: -5 }}
+                                                onClick={() => handleViewDetails(c)}
+                                                cursor="pointer"
+                                            >
+                                                <Box
+                                                    bg={cardBg}
+                                                    backdropFilter={blurEffect}
+                                                    borderRadius="2xl"
+                                                    p={5}
+                                                    border="1px solid rgba(255, 255, 255, 0.1)"
+                                                    _hover={{ border: "1px solid rgba(255, 255, 255, 0.3)", shadow: "2xl" }}
+                                                >
+                                                    <VStack align="start" spacing={3}>
+                                                        <Flex w="100%" justify="space-between" align="start">
+                                                            <VStack align="start" spacing={0}>
+                                                                <Text fontWeight="black" fontSize="lg" noOfLines={1}>
+                                                                    {c.name}
+                                                                </Text>
+                                                                <Text fontSize="xs" color="blue.300" fontWeight="bold">
+                                                                    {c.District?.name}
+                                                                </Text>
+                                                            </VStack>
+                                                            <Icon as={FaMapMarkerAlt} color="emerald.400" />
+                                                        </Flex>
+
+                                                        <Divider borderColor="whiteAlpha.200" />
+
+                                                        <HStack justify="space-between" w="100%">
+                                                            <VStack align="start" spacing={0}>
+                                                                <HStack spacing={1} color="gray.400">
+                                                                    <FaCar size={10} />
+                                                                    <Text fontSize="10px" fontWeight="black">TRAVEL FROM CENTRAL</Text>
+                                                                </HStack>
+                                                                <Text fontWeight="black" color="emerald.400" fontSize="sm">
+                                                                    {dist ? `${dist} KM` : "Unknown"}
+                                                                </Text>
+                                                            </VStack>
+                                                            <VStack align="end" spacing={0}>
+                                                                <HStack spacing={1} color="gray.400">
+                                                                    <FaClock size={10} />
+                                                                    <Text fontSize="10px" fontWeight="black">EST. TIME</Text>
+                                                                </HStack>
+                                                                <Text fontWeight="black" color="blue.300" fontSize="sm">
+                                                                    {time || "N/A"}
+                                                                </Text>
+                                                            </VStack>
+                                                        </HStack>
+                                                    </VStack>
+                                                </Box>
+                                            </Box>
+                                        );
+                                    })}
+                                </AnimatePresence>
+                            </SimpleGrid>
+                        )}
+
+                        {!loading && filteredCongregations.length === 0 && (
+                            <Flex justify="center" align="center" h="30vh">
+                                <Text color="whiteAlpha.600" fontWeight="bold">No congregations matched your search.</Text>
+                            </Flex>
+                        )}
+                    </Container>
+                </Box>
+            </Flex>
+
+            {/* Locale Detail Modal */}
+            <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
+                <ModalOverlay backdropFilter="blur(5px)" bg="rgba(0,0,0,0.4)" />
+                <ModalContent bg="gray.900" color="white" borderRadius="3xl" border="1px solid rgba(255, 255, 255, 0.1)">
+                    <ModalHeader borderBottom="1px solid rgba(255, 255, 255, 0.1)" py={6}>
+                        <VStack align="start" spacing={0}>
+                            <Text fontSize="2xl" fontWeight="black">{selectedLocale?.name}</Text>
+                            <Text fontSize="sm" color="blue.400" fontWeight="bold">{selectedLocale?.District?.name}</Text>
+                        </VStack>
+                    </ModalHeader>
+                    <ModalCloseButton mt={4} />
+                    <ModalBody p={8}>
+                        <VStack spacing={8} align="stretch">
+                            <SimpleGrid columns={2} spacing={10}>
+                                <VStack align="start" spacing={4}>
+                                    <HStack color="blue.300">
+                                        <FaCalendarAlt />
+                                        <Text fontWeight="black" fontSize="xs" letterSpacing="widest">WORSHIP SCHEDULE</Text>
+                                    </HStack>
+                                    <Box p={4} bg="whiteAlpha.100" borderRadius="2xl" w="100%">
+                                        <Text fontSize="sm" whiteSpace="pre-wrap">
+                                            {selectedLocale?.schedule || "Schedule not available yet.\nPlease refer to the official directory for latest updates."}
+                                        </Text>
+                                    </Box>
+                                </VStack>
+
+                                <VStack align="start" spacing={4}>
+                                    <HStack color="emerald.400">
+                                        <FaCar />
+                                        <Text fontWeight="black" fontSize="xs" letterSpacing="widest">TRAVEL INSIGHTS</Text>
+                                    </HStack>
+                                    <VStack p={4} bg="whiteAlpha.100" borderRadius="2xl" w="100%" align="stretch" spacing={3}>
+                                        <Flex justify="space-between">
+                                            <Text fontSize="xs" color="gray.400">Straight Distance</Text>
+                                            <Text fontSize="xs" fontWeight="bold">{calculateDistance(CENTRAL_OFFICE.lat, CENTRAL_OFFICE.lng, selectedLocale?.latitude, selectedLocale?.longitude)} KM</Text>
+                                        </Flex>
+                                        <Flex justify="space-between">
+                                            <Text fontSize="xs" color="gray.400">Traffic Estimate</Text>
+                                            <Text fontSize="xs" fontWeight="bold" color="blue.300">{estimateTravelTime(parseFloat(calculateDistance(CENTRAL_OFFICE.lat, CENTRAL_OFFICE.lng, selectedLocale?.latitude, selectedLocale?.longitude)))}</Text>
+                                        </Flex>
+                                        <Divider borderColor="whiteAlpha.100" />
+                                        <VStack align="start" spacing={1}>
+                                            <Text fontSize="10px" color="gray.500">COORDINATES</Text>
+                                            <Text fontSize="xs">{selectedLocale?.latitude}, {selectedLocale?.longitude}</Text>
+                                        </VStack>
+                                    </VStack>
+                                </VStack>
+                            </SimpleGrid>
+
+                            <VStack align="start" spacing={4}>
+                                <HStack color="orange.400">
+                                    <FaInfoCircle />
+                                    <Text fontWeight="black" fontSize="xs" letterSpacing="widest">ADDRESS & LOCATION</Text>
+                                </HStack>
+                                <Box p={4} bg="whiteAlpha.100" borderRadius="2xl" w="100%">
+                                    <Text fontSize="sm">{selectedLocale?.address || "Address details currently loading from central repository."}</Text>
+                                </Box>
+                            </VStack>
+                        </VStack>
+                    </ModalBody>
+                    <Box p={6} borderTop="1px solid rgba(255, 255, 255, 0.1)" textAlign="right">
+                        <Button colorScheme="blue" borderRadius="xl" onClick={onClose} size="sm">CLOSE DETAILS</Button>
                     </Box>
-                )}
-
-                {/* Modal Form */}
-                <Modal isOpen={isOpen} onClose={onClose} size="sm" isCentered>
-                    <ModalOverlay backdropFilter="blur(2px)" />
-                    <ModalContent borderRadius="lg">
-                        <ModalHeader fontSize="md">{editingCong ? "Edit Congregation" : "New Congregation"}</ModalHeader>
-                        <ModalCloseButton />
-                        <ModalBody>
-                            <Stack spacing={3}>
-                                <FormControl isRequired>
-                                    <FormLabel fontSize="sm">Congregation Name</FormLabel>
-                                    <Input
-                                        size="sm"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="e.g. Locale of Central"
-                                    />
-                                </FormControl>
-                                <FormControl isRequired>
-                                    <FormLabel fontSize="sm">District</FormLabel>
-                                    <Select
-                                        size="sm"
-                                        placeholder="Select District"
-                                        value={formData.district_id}
-                                        onChange={(e) => setFormData({ ...formData, district_id: parseInt(e.target.value) })}
-                                    >
-                                        {districts.map(d => (
-                                            <option key={d.id} value={d.id}>{d.name}</option>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                                <SimpleGrid columns={2} spacing={3}>
-                                    <FormControl>
-                                        <FormLabel fontSize="sm">Latitude</FormLabel>
-                                        <Input
-                                            size="sm"
-                                            type="number"
-                                            value={formData.latitude}
-                                            onChange={(e) => setFormData({ ...formData, latitude: e.target.value })}
-                                            placeholder="0.0000"
-                                        />
-                                    </FormControl>
-                                    <FormControl>
-                                        <FormLabel fontSize="sm">Longitude</FormLabel>
-                                        <Input
-                                            size="sm"
-                                            type="number"
-                                            value={formData.longitude}
-                                            onChange={(e) => setFormData({ ...formData, longitude: e.target.value })}
-                                            placeholder="0.0000"
-                                        />
-                                    </FormControl>
-                                </SimpleGrid>
-                            </Stack>
-                        </ModalBody>
-                        <ModalFooter bg="gray.50" borderBottomRadius="lg" py={2}>
-                            <Button size="sm" variant="ghost" mr={3} onClick={onClose}>Cancel</Button>
-                            <Button size="sm" colorScheme="blue" onClick={handleSave}>Save</Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
-                {/* Delete Confirmation Dialog */}
-                <AlertDialog
-                    isOpen={isDeleteOpen}
-                    leastDestructiveRef={cancelRef}
-                    onClose={onDeleteClose}
-                    isCentered
-                >
-                    <AlertDialogOverlay backdropFilter="blur(2px)">
-                        <AlertDialogContent borderRadius="lg">
-                            <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                                Delete Congregation
-                            </AlertDialogHeader>
-
-                            <AlertDialogBody>
-                                Are you sure? This action cannot be undone.
-                            </AlertDialogBody>
-
-                            <AlertDialogFooter>
-                                <Button ref={cancelRef} onClick={onDeleteClose} size="sm">
-                                    Cancel
-                                </Button>
-                                <Button colorScheme="red" onClick={confirmDelete} ml={3} size="sm">
-                                    Delete
-                                </Button>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialogOverlay>
-                </AlertDialog>
-            </Container>
+                </ModalContent>
+            </Modal>
         </Box>
     );
 };

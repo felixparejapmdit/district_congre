@@ -26,12 +26,7 @@ import {
     useBreakpointValue,
     Divider,
     Flex,
-    Menu,
-    MenuButton,
-    MenuList,
-    MenuItem,
     VStack,
-    Center,
     Progress,
     CircularProgress,
     CircularProgressLabel,
@@ -41,35 +36,11 @@ import {
 } from "@chakra-ui/react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-import "../styles.css";
-import { FaCheckSquare, FaRegSquare, FaDownload, FaEraser, FaBars, FaMapMarkerAlt, FaGlobeAsia, FaCog, FaBuilding, FaChurch, FaFileExcel, FaCloudDownloadAlt, FaFileAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import "../styles.css";
+import { FaCheckSquare, FaDownload, FaEraser, FaBars, FaMapMarkerAlt, FaGlobeAsia, FaFileExcel, FaCloudDownloadAlt, FaFileAlt } from "react-icons/fa";
 
-// 📌 Custom Marker Icon
-const markerIcon = new L.Icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/684/684908.png",
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-    popupAnchor: [0, -30],
-});
 
-// 🗺️ Component to control map panning/zooming
-const MapFlyTo = ({ district }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (district?.latitude && district?.longitude) {
-            const zoomLevel = district.isCongregation ? 16 : 10;
-            map.flyTo([district.latitude, district.longitude], zoomLevel, {
-                animate: true,
-                duration: 1.5
-            });
-        }
-    }, [district, map]);
-    return null;
-};
 
 // --- EXTRACTED COMPONENTS (Fixes Focus Issue) ---
 
@@ -309,7 +280,6 @@ const Globe = () => {
     // --- State ---
     const [districts, setDistricts] = useState([]);
     const [selectedDistrictIds, setSelectedDistrictIds] = useState([]);
-    const [mapFocusTarget, setMapFocusTarget] = useState(null);
     const [localCongregations, setLocalCongregations] = useState([]);
     const [allCongregations, setAllCongregations] = useState([]);
 
@@ -374,9 +344,6 @@ const Globe = () => {
                     isCongregation: false,
                 }));
                 setDistricts(updatedDistricts);
-                if (updatedDistricts.length > 0) {
-                    setMapFocusTarget(updatedDistricts[0]);
-                }
 
                 // 2. Fetch All Congregations (for search)
                 const congResponse = await axios.get(`${API_URL}/api/all-congregations`);
@@ -426,7 +393,6 @@ const Globe = () => {
             newSelectedIds = selectedDistrictIds.filter((id) => id !== district.id);
         } else {
             newSelectedIds = [...selectedDistrictIds, district.id];
-            setMapFocusTarget(district);
         }
 
         setSelectedDistrictIds(newSelectedIds);
@@ -434,7 +400,6 @@ const Globe = () => {
     };
 
     const handleDistrictClick = (district) => {
-        setMapFocusTarget(district);
         // User Logic: Clicking row should select it (for Export visibility)
         // Check if already selected
         if (!selectedDistrictIds.includes(district.id)) {
@@ -460,7 +425,6 @@ const Globe = () => {
         }
 
         setSelectedCongregation(cong);
-        setMapFocusTarget(cong);
         setCongregationSchedule("");
         handleGlobalSearchResultClick(cong);
         setLoadingSchedule(true);
@@ -624,37 +588,24 @@ const Globe = () => {
     return (
         <Box w="100vw" h="100vh" position="relative" overflow="hidden" bg="gray.100">
 
-            {/* 🗺️ MAP */}
-            <Box position="absolute" top="0" left="0" w="100%" h="100%" zIndex="0">
-                <MapContainer
-                    center={[12.8797, 121.774]}
-                    zoom={6}
-                    style={{ width: "100%", height: "100%" }}
-                    zoomControl={false}
-                >
-                    <TileLayer
-                        attribution='&copy; OpenStreetMap'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <MapFlyTo district={mapFocusTarget} />
-
-                    {displayedCongregations
-                        .filter((cong) => cong.latitude && cong.longitude)
-                        .map((cong) => (
-                            <Marker
-                                key={cong.id}
-                                position={[cong.latitude, cong.longitude]}
-                                icon={markerIcon}
-                                eventHandlers={{
-                                    click: () => handleCongregationClick(cong),
-                                }}
-                            >
-                                <Popup>
-                                    <Text fontWeight="bold">{cong.name}</Text>
-                                </Popup>
-                            </Marker>
-                        ))}
-                </MapContainer>
+            {/* 🌍 BACKGROUND IMAGE (Replaced Map) */}
+            <Box
+                position="absolute"
+                top="0"
+                left="0"
+                w="100%"
+                h="100%"
+                zIndex="0"
+                backgroundImage="url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')"
+                backgroundSize="cover"
+                backgroundPosition="center"
+                filter="brightness(0.6)"
+            >
+                <Box
+                    w="100%"
+                    h="100%"
+                    bgGradient="radial(circle at center, transparent, rgba(0,0,0,0.4))"
+                />
             </Box>
 
             {/* 📱 MOBILE: Menu Button */}
@@ -768,29 +719,7 @@ const Globe = () => {
                 </Box>
             )}
 
-            {/* ⚙️ SETTINGS BUTTON */}
-            <Box position="absolute" top={4} right={4} zIndex="1000">
-                <Menu>
-                    <MenuButton
-                        as={IconButton}
-                        aria-label="Options"
-                        icon={<FaCog />}
-                        variant="solid"
-                        colorScheme="blue"
-                        size="lg"
-                        borderRadius="full"
-                        boxShadow="lg"
-                    />
-                    <MenuList zIndex="1001">
-                        <MenuItem icon={<FaBuilding />} onClick={() => navigate('/districts')}>
-                            Manage Districts
-                        </MenuItem>
-                        <MenuItem icon={<FaChurch />} onClick={() => navigate('/local-congregations')}>
-                            Manage Local Congregations
-                        </MenuItem>
-                    </MenuList>
-                </Menu>
-            </Box>
+
 
             {/* 🗓️ SCHEDULE MODAL */}
             <Modal isOpen={isScheduleOpen} onClose={handleCloseSchedule} isCentered blockScrollOnMount={false}>

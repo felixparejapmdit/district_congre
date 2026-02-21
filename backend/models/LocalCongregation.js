@@ -35,6 +35,15 @@ const LocalCongregation = sequelize.define(
       type: DataTypes.STRING(255),
       allowNull: true,
     },
+    slug: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      unique: true,
+    },
+    schedule: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     tableName: "local_congregation",

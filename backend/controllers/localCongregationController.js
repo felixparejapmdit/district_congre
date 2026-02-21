@@ -89,7 +89,10 @@ exports.getLocalCongregationById = async (req, res) => {
 // Create a new local congregation
 exports.createLocalCongregation = async (req, res) => {
   try {
-    const newLocalCongregation = await LocalCongregation.create(req.body);
+    const { name, district_id, latitude, longitude, address, slug, schedule } = req.body;
+    const newLocalCongregation = await LocalCongregation.create({
+      name, district_id, latitude, longitude, address, slug, schedule
+    });
 
     res.status(201).json({
       message: "Local congregation created successfully",
@@ -112,7 +115,10 @@ exports.updateLocalCongregation = async (req, res) => {
       return res.status(404).json({ message: "Local congregation not found" });
     }
 
-    await localCongregation.update(req.body);
+    const { name, district_id, latitude, longitude, address, slug, schedule } = req.body;
+    await localCongregation.update({
+      name, district_id, latitude, longitude, address, slug, schedule
+    });
 
     res.status(200).json({
       message: "Local congregation updated successfully",
@@ -157,11 +163,11 @@ exports.deleteLocalCongregation = async (req, res) => {
 exports.getLocalCongregationsByMultiDistrict = async (req, res) => {
   try {
     // 1. Change this to match the URL parameter name
-    const districtIds = req.query.district_ids; 
+    const districtIds = req.query.district_ids;
 
     if (!districtIds) {
       // 2. Update the error message to be clear
-      return res.status(400).json({ error: "district_ids is required" }); 
+      return res.status(400).json({ error: "district_ids is required" });
     }
 
     const ids = districtIds.split(",").map(Number);
@@ -185,6 +191,12 @@ exports.getAllCongregations = async (req, res) => {
   try {
     const congregations = await LocalCongregation.findAll({
       order: [["name", "ASC"]],
+      include: [
+        {
+          model: District,
+          attributes: ["id", "name"],
+        },
+      ],
     });
     res.json(congregations);
   } catch (err) {
