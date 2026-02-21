@@ -88,7 +88,8 @@ const Districts = () => {
   const [deletingId, setDeletingId] = useState(null);
 
   const cardBg = useColorModeValue("white", "gray.700");
-  const API_URL = process.env.REACT_APP_API_URL || "";
+  const envApiUrl = process.env.REACT_APP_API_URL || "";
+  const API_URL = envApiUrl === "/" ? "" : envApiUrl;
 
   // Helper: Fetch Data
   const fetchDistricts = async () => {

@@ -16,8 +16,13 @@ fi
 
 echo -e "\033[0;32mDeploying Locally using '$DOCKER_COMPOSE'...\033[0m"
 
+# 🟢 FIX: Bypass broken credential helper configuration in Windows/Bash
+export DOCKER_CONFIG="./.docker_tmp"
+mkdir -p "$DOCKER_CONFIG"
+echo '{"credsStore": ""}' > "$DOCKER_CONFIG/config.json"
+
 # Bring down existing containers to ensure a clean slate
-$DOCKER_COMPOSE -f docker-compose.yml down
+$DOCKER_COMPOSE -f docker-compose.yml down --remove-orphans
 
 # Up with build, using the standard .env file
 $DOCKER_COMPOSE -f docker-compose.yml --env-file .env up -d --build

@@ -338,7 +338,8 @@ const Globe = () => {
     const isMobile = useBreakpointValue({ base: true, md: false });
 
     // API Config
-    const API_URL = process.env.REACT_APP_API_URL || "";
+    const envApiUrl = process.env.REACT_APP_API_URL || "";
+    const API_URL = envApiUrl === "/" ? "" : envApiUrl;
     const SCRAPER_URL = `${API_URL}/api/scrape`;
 
     // --- Computed Data ---

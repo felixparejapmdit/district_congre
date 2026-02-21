@@ -25,6 +25,9 @@ dist
 .env.production.local
 .env.proxmox
 
+# Temp Docker Config
+.docker_tmp/
+
 # IDE
 .idea
 .vscode
