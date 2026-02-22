@@ -89,9 +89,9 @@ exports.getLocalCongregationById = async (req, res) => {
 // Create a new local congregation
 exports.createLocalCongregation = async (req, res) => {
   try {
-    const { name, district_id, latitude, longitude, address, slug, schedule } = req.body;
+    const { name, district_id, latitude, longitude, address, slug, schedule, image_url, contact } = req.body;
     const newLocalCongregation = await LocalCongregation.create({
-      name, district_id, latitude, longitude, address, slug, schedule
+      name, district_id, latitude, longitude, address, slug, schedule, image_url, contact
     });
 
     res.status(201).json({
@@ -115,9 +115,9 @@ exports.updateLocalCongregation = async (req, res) => {
       return res.status(404).json({ message: "Local congregation not found" });
     }
 
-    const { name, district_id, latitude, longitude, address, slug, schedule } = req.body;
+    const { name, district_id, latitude, longitude, address, slug, schedule, image_url, contact } = req.body;
     await localCongregation.update({
-      name, district_id, latitude, longitude, address, slug, schedule
+      name, district_id, latitude, longitude, address, slug, schedule, image_url, contact
     });
 
     res.status(200).json({

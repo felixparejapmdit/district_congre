@@ -21,16 +21,35 @@ import {
     Divider,
     Badge,
     useBreakpointValue,
+    Checkbox,
+    useToast,
+    Tooltip,
+    CircularProgress,
+    CircularProgressLabel,
+    Progress
 } from "@chakra-ui/react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { FaSearch, FaMapMarkerAlt, FaGlobeAsia, FaClock, FaPhoneAlt, FaSyncAlt, FaArrowLeft } from "react-icons/fa";
+import {
+    FaSearch,
+    FaMapMarkerAlt,
+    FaGlobeAsia,
+    FaClock,
+    FaPhoneAlt,
+    FaSyncAlt,
+    FaArrowLeft,
+    FaDownload,
+    FaCheckSquare,
+    FaEraser
+} from "react-icons/fa";
 
-const API_BASE = "http://localhost:5001/api";
+const SCRAPER_BASE = "http://localhost:5001/api";
+const DB_BASE = "http://localhost:3001/api";
 
 const DirectoryManager = () => {
     const navigate = useNavigate();
+    const toast = useToast();
     const [districts, setDistricts] = useState([]);
     const [filteredDistricts, setFilteredDistricts] = useState([]);
     const [searchDistrict, setSearchDistrict] = useState("");
@@ -43,9 +62,19 @@ const DirectoryManager = () => {
     const [loadingDistricts, setLoadingDistricts] = useState(false);
     const [loadingLocales, setLoadingLocales] = useState(false);
     const [loadingDetails, setLoadingDetails] = useState(false);
+    const [selectedDistrictIds, setSelectedDistrictIds] = useState([]);
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportProgress, setExportProgress] = useState(0);
+    const [exportStatus, setExportStatus] = useState("");
 
     const isMobile = useBreakpointValue({ base: true, md: false });
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const { isOpen: isExportOpen, onOpen: onExportOpen, onClose: onExportClose } = useDisclosure();
+
+    const selectedDistrictNames = districts
+        .filter(d => selectedDistrictIds.includes(d.id))
+        .map(d => d.name)
+        .join(', ');
 
     useEffect(() => {
         fetchDistricts();
@@ -54,18 +83,31 @@ const DirectoryManager = () => {
     const fetchDistricts = async () => {
         setLoadingDistricts(true);
         try {
-            const { data } = await axios.get(`${API_BASE}/districts`);
+            // Fetch from both to get IDs for export
+            const [webRes, dbRes] = await Promise.all([
+                axios.get(`${SCRAPER_BASE}/districts`),
+                axios.get(`${DB_BASE}/districts`)
+            ]);
+
             const parser = new DOMParser();
-            const doc = parser.parseFromString(data, 'text/html');
+            const doc = parser.parseFromString(webRes.data, 'text/html');
             const links = doc.querySelectorAll('.mdl-list_item a.weight-700');
-            const parsedDistricts = Array.from(links).map(link => ({
-                name: link.textContent.trim(),
-                path: link.getAttribute('href')
-            }));
+
+            const parsedDistricts = Array.from(links).map(link => {
+                const name = link.textContent.trim();
+                const match = dbRes.data.find(d => d.name.toLowerCase() === name.toLowerCase());
+                return {
+                    name,
+                    path: link.getAttribute('href'),
+                    id: match ? match.id : null
+                };
+            });
+
             setDistricts(parsedDistricts);
             setFilteredDistricts(parsedDistricts);
         } catch (error) {
             console.error("Error fetching districts:", error);
+            toast({ title: "Sync failed", status: "warning" });
         } finally {
             setLoadingDistricts(false);
         }
@@ -78,7 +120,7 @@ const DirectoryManager = () => {
         setFilteredLocales([]);
         setLoadingLocales(true);
         try {
-            const { data } = await axios.get(`${API_BASE}/locales?path=${encodeURIComponent(district.path)}`);
+            const { data } = await axios.get(`${SCRAPER_BASE}/locales?path=${encodeURIComponent(district.path)}`);
             const parser = new DOMParser();
             const doc = parser.parseFromString(data, 'text/html');
             const links = doc.querySelectorAll('.mdl-grid a[href*="/locales/"]');
@@ -101,12 +143,94 @@ const DirectoryManager = () => {
         setLoadingDetails(true);
         onOpen();
         try {
-            const { data } = await axios.get(`${API_BASE}/scrape/${locale.slug}`);
+            const { data } = await axios.get(`${SCRAPER_BASE}/scrape/${locale.slug}`);
             setLocaleDetails(data);
         } catch (error) {
             console.error("Error fetching details:", error);
         } finally {
             setLoadingDetails(false);
+        }
+    };
+
+    const toggleSelectAllVisible = () => {
+        const visibleIds = filteredDistricts.map(d => d.id).filter(id => id !== null);
+        const allSelected = visibleIds.every(id => selectedDistrictIds.includes(id));
+
+        if (allSelected) {
+            setSelectedDistrictIds(prev => prev.filter(id => !visibleIds.includes(id)));
+        } else {
+            setSelectedDistrictIds(prev => [...new Set([...prev, ...visibleIds])]);
+        }
+    };
+
+    const handleClearSelection = () => {
+        setSelectedDistrictIds([]);
+    };
+
+    const handleExport = async () => {
+        if (selectedDistrictIds.length === 0) {
+            toast({ title: "Select districts first", status: "warning", position: "top" });
+            return;
+        }
+
+        setIsExporting(true);
+        setExportProgress(0);
+        setExportStatus("Initializing Export...");
+        onExportOpen();
+
+        try {
+            // Simulate progression like Globe.js for better UX
+            const listRes = await axios.get(`${DB_BASE}/local-congregations-multi?district_ids=${selectedDistrictIds.join(',')}`);
+            const total = listRes.data.length;
+
+            if (total === 0) {
+                toast({ title: "No congregations found in selection", status: "info" });
+                setIsExporting(false);
+                onExportClose();
+                return;
+            }
+
+            // Start actual process
+            const exportPromise = axios.post(`${DB_BASE}/export-schedule`, {
+                districtIds: selectedDistrictIds
+            }, { responseType: 'blob' });
+
+            // Progression simulation
+            for (let i = 0; i < total; i++) {
+                const cong = listRes.data[i];
+                setExportStatus(`[${i + 1}/${total}] Processing ${cong.name}...`);
+                setExportProgress(Math.floor((i / total) * 95));
+                // Small sleep for UX
+                await new Promise(r => setTimeout(r, total > 50 ? 50 : 200));
+            }
+
+            setExportStatus("Generatng Excel file...");
+            setExportProgress(98);
+
+            const response = await exportPromise;
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `District_Export_${new Date().getTime()}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            setExportProgress(100);
+            setExportStatus("Export Complete!");
+            toast({ title: "Success", description: "Your file is ready.", status: "success" });
+
+            setTimeout(() => {
+                onExportClose();
+                setIsExporting(false);
+            }, 1000);
+
+        } catch (error) {
+            console.error("Export failed:", error);
+            toast({ title: "Export Error", description: "Failed to generate report.", status: "error" });
+            setIsExporting(false);
+            onExportClose();
         }
     };
 
@@ -156,7 +280,7 @@ const DirectoryManager = () => {
             >
                 {/* DISTRICTS SIDEBAR */}
                 <Box
-                    w={isMobile ? "100%" : "350px"}
+                    w={isMobile ? "100%" : "380px"}
                     bg="rgba(255, 255, 255, 0.9)"
                     backdropFilter="blur(15px)"
                     borderRadius="2xl"
@@ -169,31 +293,35 @@ const DirectoryManager = () => {
                     <VStack align="stretch" spacing={4} flex="1" overflow="hidden">
                         <Flex justify="space-between" align="center">
                             <HStack spacing={3}>
-                                <IconButton
-                                    icon={<FaArrowLeft />}
-                                    variant="ghost"
-                                    colorScheme="blue"
-                                    size="sm"
-                                    onClick={() => navigate("/")}
-                                    aria-label="Back to Dashboard"
-                                    _hover={{ bg: "blue.50" }}
-                                />
                                 <Text fontSize="xl" fontWeight="black" color="blue.900" display="flex" align="center" gap={2}>
                                     <FaGlobeAsia /> DISTRICTS
-                                    <Badge ml={1} colorScheme="blue" borderRadius="full" px={2}>
-                                        {districts.length}
-                                    </Badge>
                                 </Text>
                             </HStack>
-                            <IconButton
-                                icon={<FaSyncAlt />}
-                                size="sm"
-                                variant="ghost"
-                                onClick={fetchDistricts}
-                                isLoading={loadingDistricts}
-                                aria-label="Refresh districts"
-                            />
+                            <HStack spacing={1}>
+                                <Tooltip label="Select All Visible">
+                                    <IconButton size="xs" icon={<FaCheckSquare />} variant="ghost" onClick={toggleSelectAllVisible} colorScheme="blue" />
+                                </Tooltip>
+                                <Tooltip label="Clear Selection">
+                                    <IconButton size="xs" icon={<FaEraser />} variant="ghost" onClick={handleClearSelection} colorScheme="red" />
+                                </Tooltip>
+                                <Button
+                                    size="sm"
+                                    colorScheme="green"
+                                    leftIcon={<FaDownload />}
+                                    onClick={handleExport}
+                                    isLoading={isExporting}
+                                    borderRadius="full"
+                                    shadow="md"
+                                    fontSize="xs"
+                                >
+                                    EXPORT
+                                </Button>
+                            </HStack>
                         </Flex>
+
+                        <Text fontSize="10px" color="gray.500" fontWeight="bold" noOfLines={1} opacity={0.7}>
+                            SELECTED: {selectedDistrictNames || "NONE"}
+                        </Text>
 
                         <Box position="relative">
                             <Input
@@ -226,8 +354,7 @@ const DirectoryManager = () => {
                                         <ListItem
                                             key={i}
                                             as={motion.div}
-                                            whileHover={{ scale: 1.02, x: 4 }}
-                                            whileTap={{ scale: 0.98 }}
+                                            whileHover={{ scale: 1.01, x: 2 }}
                                             p={3}
                                             bg={selectedDistrict?.path === d.path ? "blue.600" : "white"}
                                             color={selectedDistrict?.path === d.path ? "white" : "gray.700"}
@@ -239,7 +366,26 @@ const DirectoryManager = () => {
                                             fontWeight="bold"
                                             transition="all 0.2s"
                                         >
-                                            {d.name}
+                                            <HStack justify="space-between">
+                                                <Text flex="1" noOfLines={1}>{d.name}</Text>
+                                                <Checkbox
+                                                    colorScheme="blue"
+                                                    borderColor="gray.300"
+                                                    isChecked={selectedDistrictIds.includes(d.id)}
+                                                    onChange={(e) => {
+                                                        e.stopPropagation();
+                                                        if (!d.id) {
+                                                            toast({ title: "Not in database", status: "warning", size: "sm" });
+                                                            return;
+                                                        }
+                                                        setSelectedDistrictIds(prev =>
+                                                            prev.includes(d.id)
+                                                                ? prev.filter(id => id !== d.id)
+                                                                : [...prev, d.id]
+                                                        );
+                                                    }}
+                                                />
+                                            </HStack>
                                         </ListItem>
                                     ))}
                                 </List>
@@ -505,6 +651,35 @@ const DirectoryManager = () => {
                             <Flex justify="center" p={10}><Text color="gray.500">Failed to load details.</Text></Flex>
                         )}
                     </ModalBody>
+                </ModalContent>
+            </Modal>
+            {/* EXPORT PROGRESS MODAL */}
+            <Modal isOpen={isExportOpen} onClose={() => { }} isCentered closeOnOverlayClick={false}>
+                <ModalOverlay backdropFilter="blur(20px)" />
+                <ModalContent borderRadius="3xl" p={8} shadow="2xl" border="1px solid" borderColor="blue.100">
+                    <VStack spacing={6}>
+                        <Box position="relative">
+                            <CircularProgress value={exportProgress} size="120px" thickness="8px" color="blue.500">
+                                <CircularProgressLabel fontWeight="black" fontSize="xl">{exportProgress}%</CircularProgressLabel>
+                            </CircularProgress>
+                            {exportProgress === 100 && (
+                                <Box position="absolute" top="0" right="0" bg="green.500" color="white" borderRadius="full" p={1} shadow="lg">
+                                    <FaDownload size={12} />
+                                </Box>
+                            )}
+                        </Box>
+
+                        <VStack spacing={2} align="center">
+                            <Text fontWeight="black" fontSize="xl" color="blue.900" letterSpacing="tight">
+                                {exportStatus === "Export Complete!" ? "DISTRICT EXPORT READY" : "GENERATING DIRECTORY"}
+                            </Text>
+                            <Text fontSize="sm" color="gray.500" fontWeight="bold" textAlign="center">
+                                {exportStatus}
+                            </Text>
+                        </VStack>
+
+                        <Progress value={exportProgress} w="100%" borderRadius="full" size="sm" colorScheme="blue" hasStripe isAnimated />
+                    </VStack>
                 </ModalContent>
             </Modal>
         </Box>

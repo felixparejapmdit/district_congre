@@ -77,9 +77,7 @@ const SidebarContent = ({
     setSearchDistrict,
     toggleSelectAllVisible,
     handleClearSelection,
-    handleExportClick,
     selectedDistrictIds,
-    isExporting,
     filteredDistricts,
     toggleDistrictSelection,
     handleDistrictClick,
@@ -131,16 +129,6 @@ const SidebarContent = ({
                         />
                     </Tooltip>
                 </HStack>
-                <Button
-                    size="sm"
-                    colorScheme="green"
-                    leftIcon={<FaDownload />}
-                    onClick={handleExportClick}
-                    isDisabled={selectedDistrictIds.length === 0}
-                    isLoading={isExporting}
-                >
-                    Export
-                </Button>
             </Flex>
 
             {/* Selected Districts Text */}
@@ -291,17 +279,10 @@ const Globe = () => {
     const [selectedCongregation, setSelectedCongregation] = useState(null);
     const [congregationSchedule, setCongregationSchedule] = useState("");
     const [loadingSchedule, setLoadingSchedule] = useState(false);
-    const [isExporting, setIsExporting] = useState(false);
-    const [exportStatus, setExportStatus] = useState("");
-    const [exportProgress, setExportProgress] = useState(0);
-    const [exportResults, setExportResults] = useState([]);
-    const [exportDownloadUrl, setExportDownloadUrl] = useState("");
-    const [isExportSuccess, setIsExportSuccess] = useState(false);
     const [previousCongregations, setPreviousCongregations] = useState([]);
 
     // --- Hooks ---
     const { isOpen: isScheduleOpen, onOpen: openSchedule, onClose: closeSchedule } = useDisclosure();
-    const { isOpen: isConfirmOpen, onOpen: openConfirm, onClose: closeConfirm } = useDisclosure();
     const { isOpen: isMobileMenuOpen, onOpen: openMobileMenu, onClose: closeMobileMenu } = useDisclosure();
 
     // Responsive Check
@@ -400,18 +381,12 @@ const Globe = () => {
     };
 
     const handleDistrictClick = (district) => {
-        // User Logic: Clicking row should select it (for Export visibility)
-        // Check if already selected
+        // User Logic: Clicking row should select it
         if (!selectedDistrictIds.includes(district.id)) {
-            // Add to selection
             const newSelectedIds = [...selectedDistrictIds, district.id];
             setSelectedDistrictIds(newSelectedIds);
             fetchSelectedCongregations(newSelectedIds);
         } else {
-            // If already selected, maybe just fetch/refresh? 
-            // Or should it deselect? 
-            // Usually row click = select. To deselect, click checkbox. 
-            // Let's just keep it selected and ensure we fetch.
             fetchSelectedCongregations(selectedDistrictIds);
         }
 
@@ -419,7 +394,6 @@ const Globe = () => {
     };
 
     const handleCongregationClick = async (cong) => {
-        // Save current list if we are about to replace it via global search logic
         if (searchCongregation && localCongregations.length > 1) {
             setPreviousCongregations(localCongregations);
         }
@@ -443,7 +417,6 @@ const Globe = () => {
 
     const handleCloseSchedule = () => {
         closeSchedule();
-        // If we were in a global search result view, and have a saved previous list, restore it
         if (previousCongregations.length > 0) {
             setLocalCongregations(previousCongregations);
             setPreviousCongregations([]);
@@ -451,9 +424,7 @@ const Globe = () => {
     };
 
     const handleGlobalSearchResultClick = (cong) => {
-        // If we found it via search, put it in the list
         setLocalCongregations([cong]);
-
         if (isMobile) closeMobileMenu();
     };
 
@@ -476,109 +447,6 @@ const Globe = () => {
         setLocalCongregations([]);
     };
 
-    // Export Logic
-    const handleExportClick = () => {
-        if (selectedDistrictIds.length === 0) {
-            toast({
-                title: "Selection Required",
-                description: "Please select at least one district to export.",
-                status: "warning",
-                duration: 3000,
-                position: "top-right",
-                variant: "left-accent",
-                isClosable: true
-            });
-            return;
-        }
-        openConfirm();
-    };
-
-    const confirmExport = async () => {
-        closeConfirm();
-        setIsExporting(true);
-        setIsExportSuccess(false);
-        setExportProgress(0);
-        setExportStatus("Initializing...");
-        setExportDownloadUrl("");
-
-        try {
-            // 1. Get the list so we know what we are exporting
-            const listRes = await axios.get(`${API_URL}/api/local-congregations-multi?district_ids=${selectedDistrictIds.join(',')}`);
-            const total = listRes.data.length;
-
-            if (total === 0) {
-                toast({
-                    title: "No Data Found",
-                    description: "No congregations found for the selected districts.",
-                    status: "info",
-                    duration: 3000,
-                    position: "top-right",
-                    variant: "left-accent",
-                    isClosable: true
-                });
-                setIsExporting(false);
-                return;
-            }
-
-            setExportResults(listRes.data);
-
-            // 2. Start the real backend export
-            const exportPromise = axios.post(`${API_URL}/api/export-schedule`, { districtIds: selectedDistrictIds }, { responseType: 'blob' });
-
-            // 3. Simulate progress
-            let exportDone = false;
-            exportPromise.then(() => exportDone = true).catch(() => exportDone = true);
-
-            for (let i = 0; i < total; i++) {
-                if (exportDone) break; // Snappy finish if backend is faster than simulation
-
-                const cong = listRes.data[i];
-                setExportStatus(`[${i + 1}/${total}] Scraping: ${cong.name}`);
-                setExportProgress(Math.floor((i / total) * 95));
-
-                await new Promise(r => setTimeout(r, total > 50 ? 250 : 600));
-            }
-
-            setExportStatus("Finalizing Excel file...");
-            setExportProgress(98);
-
-            // 4. Await the actual result
-            const response = await exportPromise;
-
-            const url = window.URL.createObjectURL(new Blob([response.data]));
-            setExportDownloadUrl(url);
-
-            setExportProgress(100);
-            setExportStatus("Success!");
-            setIsExportSuccess(true);
-
-        } catch (e) {
-            console.error("Export error:", e);
-            toast({
-                title: "Export Failed",
-                description: "An error occurred during export. Please try again.",
-                status: "error",
-                duration: 4000,
-                position: "top-right",
-                variant: "left-accent",
-                isClosable: true
-            });
-            setIsExporting(false);
-        }
-    };
-
-    const handleDownloadExport = () => {
-        if (!exportDownloadUrl) return;
-        const link = document.createElement('a');
-        link.href = exportDownloadUrl;
-        link.setAttribute('download', `INC_Schedule_${Date.now()}.xlsx`);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-    };
-
-
-
     const selectedDistrictNames = districts
         .filter(d => selectedDistrictIds.includes(d.id))
         .map(d => d.name)
@@ -588,7 +456,7 @@ const Globe = () => {
     return (
         <Box w="100vw" h="100vh" position="relative" overflow="hidden" bg="gray.100">
 
-            {/* 🌍 BACKGROUND IMAGE (Replaced Map) */}
+            {/* 🌍 BACKGROUND IMAGE */}
             <Box
                 position="absolute"
                 top="0"
@@ -636,9 +504,7 @@ const Globe = () => {
                             setSearchDistrict={setSearchDistrict}
                             toggleSelectAllVisible={toggleSelectAllVisible}
                             handleClearSelection={handleClearSelection}
-                            handleExportClick={handleExportClick}
                             selectedDistrictIds={selectedDistrictIds}
-                            isExporting={isExporting}
                             filteredDistricts={filteredDistricts}
                             toggleDistrictSelection={toggleDistrictSelection}
                             handleDistrictClick={handleDistrictClick}
@@ -654,7 +520,7 @@ const Globe = () => {
                 </DrawerContent>
             </Drawer>
 
-            {/* 💻 DESKTOP: Left Sidebar (Districts) */}
+            {/* 💻 DESKTOP: Left Sidebar */}
             {!isMobile && (
                 <Box
                     position="absolute"
@@ -675,9 +541,7 @@ const Globe = () => {
                         setSearchDistrict={setSearchDistrict}
                         toggleSelectAllVisible={toggleSelectAllVisible}
                         handleClearSelection={handleClearSelection}
-                        handleExportClick={handleExportClick}
                         selectedDistrictIds={selectedDistrictIds}
-                        isExporting={isExporting}
                         filteredDistricts={filteredDistricts}
                         toggleDistrictSelection={toggleDistrictSelection}
                         handleDistrictClick={handleDistrictClick}
@@ -692,7 +556,7 @@ const Globe = () => {
                 </Box>
             )}
 
-            {/* 💻 DESKTOP: Right Panel (Congregations) */}
+            {/* 💻 DESKTOP: Right Panel */}
             {!isMobile && (localCongregations.length > 0 || searchCongregation) && (
                 <Box
                     position="absolute"
@@ -718,8 +582,6 @@ const Globe = () => {
                     />
                 </Box>
             )}
-
-
 
             {/* 🗓️ SCHEDULE MODAL */}
             <Modal isOpen={isScheduleOpen} onClose={handleCloseSchedule} isCentered blockScrollOnMount={false}>
@@ -764,173 +626,6 @@ const Globe = () => {
                     </ModalBody>
                 </ModalContent>
             </Modal>
-
-            {/* ⚠️ EXPORT CONFIRM MODAL */}
-            <Modal isOpen={isConfirmOpen} onClose={closeConfirm} isCentered>
-                <ModalOverlay />
-                <ModalContent borderRadius="xl">
-                    <ModalHeader>Confirm Export</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody>
-                        <Text>Export schedule for <b>{selectedDistrictIds.length}</b> districts?</Text>
-                        <Flex mt={6} gap={3} mb={2}>
-                            <Button flex="1" onClick={closeConfirm}>Cancel</Button>
-                            <Button flex="1" colorScheme="blue" onClick={confirmExport} isLoading={isExporting}>
-                                Export
-                            </Button>
-                        </Flex>
-                    </ModalBody>
-                </ModalContent>
-            </Modal>
-
-            {/* 🚀 EXPORT PROGRESS OVERLAY */}
-            <AnimatePresence>
-                {isExporting && (
-                    <Portal>
-                        <Box
-                            as={motion.div}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            position="fixed"
-                            top="0"
-                            left="0"
-                            right="0"
-                            bottom="0"
-                            bg="rgba(0, 0, 0, 0.7)"
-                            backdropFilter="blur(8px)"
-                            zIndex="2000"
-                            display="flex"
-                            alignItems="center"
-                            justifyContent="center"
-                            p={4}
-                        >
-                            <VStack
-                                as={motion.div}
-                                initial={{ scale: 0.9, y: 20 }}
-                                animate={{ scale: 1, y: 0 }}
-                                bg="white"
-                                p={isExportSuccess ? 0 : 8}
-                                borderRadius="2xl"
-                                shadow="2xl"
-                                spacing={isExportSuccess ? 0 : 6}
-                                w="full"
-                                maxW={isExportSuccess ? "500px" : "400px"}
-                                textAlign="center"
-                                overflow="hidden"
-                                position="relative"
-                            >
-                                {!isExportSuccess ? (
-                                    <>
-                                        <CircularProgress
-                                            value={exportProgress}
-                                            color="blue.500"
-                                            size="120px"
-                                            thickness="8px"
-                                            capIsRound
-                                        >
-                                            <CircularProgressLabel fontSize="xl" fontWeight="bold">
-                                                {exportProgress}%
-                                            </CircularProgressLabel>
-                                        </CircularProgress>
-
-                                        <VStack spacing={2}>
-                                            <Text fontWeight="bold" fontSize="lg">Generating Export</Text>
-                                            <Text fontSize="sm" color="gray.500">
-                                                {exportStatus}
-                                            </Text>
-                                        </VStack>
-
-                                        <Progress
-                                            value={exportProgress}
-                                            size="xs"
-                                            width="100%"
-                                            borderRadius="full"
-                                            colorScheme="blue"
-                                            isIndeterminate={exportProgress < 10 || exportProgress > 90}
-                                        />
-
-                                        <Text fontSize="xs" color="gray.400">
-                                            Please do not close your browser.
-                                        </Text>
-                                    </>
-                                ) : (
-                                    <Box w="full" textAlign="left">
-                                        <Box bg="blue.600" p={6} color="white" position="relative">
-                                            <HStack spacing={4}>
-                                                <Box bg="whiteAlpha.300" p={3} borderRadius="lg">
-                                                    <FaFileExcel size="24px" />
-                                                </Box>
-                                                <Box>
-                                                    <Text fontWeight="bold" fontSize="xl">Export Ready</Text>
-                                                    <Text fontSize="sm" opacity={0.9}>{exportResults.length} congregations processed</Text>
-                                                </Box>
-                                            </HStack>
-                                            <IconButton
-                                                icon={<FaBars style={{ transform: 'rotate(90deg)' }} />}
-                                                position="absolute"
-                                                top={4}
-                                                right={4}
-                                                variant="ghost"
-                                                color="white"
-                                                size="sm"
-                                                aria-label="Close"
-                                                onClick={() => setIsExporting(false)}
-                                            />
-                                        </Box>
-
-                                        <Box p={6}>
-                                            <Text fontSize="sm" fontWeight="bold" color="gray.500" mb={3} display="flex" alignItems="center" gap={2}>
-                                                <FaFileAlt /> LIST OF CONGREGATIONS
-                                            </Text>
-                                            <Box maxH="250px" overflowY="auto" pr={2} css={{
-                                                '&::-webkit-scrollbar': { width: '4px' },
-                                                '&::-webkit-scrollbar-thumb': { background: '#CBD5E0', borderRadius: '4px' },
-                                            }}>
-                                                <List spacing={2}>
-                                                    {exportResults.map(cong => (
-                                                        <ListItem
-                                                            key={cong.id}
-                                                            fontSize="xs"
-                                                            p={2}
-                                                            bg="gray.50"
-                                                            borderRadius="md"
-                                                            display="flex"
-                                                            justifyContent="space-between"
-                                                            alignItems="center"
-                                                        >
-                                                            <Text fontWeight="medium" noOfLines={1}>{cong.name}</Text>
-                                                            <Badge size="sm" variant="subtle" colorScheme="blue">OK</Badge>
-                                                        </ListItem>
-                                                    ))}
-                                                </List>
-                                            </Box>
-
-                                            <VStack mt={6} spacing={3}>
-                                                <Button
-                                                    w="full"
-                                                    colorScheme="blue"
-                                                    leftIcon={<FaCloudDownloadAlt />}
-                                                    onClick={handleDownloadExport}
-                                                    size="lg"
-                                                    shadow="md"
-                                                >
-                                                    Open Excel File
-                                                </Button>
-                                                <Button w="full" variant="ghost" onClick={() => setIsExporting(false)}>
-                                                    Close
-                                                </Button>
-                                            </VStack>
-                                        </Box>
-                                    </Box>
-                                )}
-                            </VStack>
-                        </Box>
-                    </Portal>
-                )}
-
-            </AnimatePresence>
-
         </Box>
     );
 };

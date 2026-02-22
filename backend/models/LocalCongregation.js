@@ -44,6 +44,14 @@ const LocalCongregation = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    image_url: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    contact: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     tableName: "local_congregation",

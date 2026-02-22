@@ -12,11 +12,12 @@ import {
     StatNumber,
     StatHelpText,
     Spinner,
-    useBreakpointValue,
+    useColorModeValue,
+    useColorMode,
 } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FaGlobeAsia, FaMapMarkerAlt, FaChartLine, FaPlusCircle, FaSync } from "react-icons/fa";
+import { FaGlobeAsia, FaMapMarkerAlt, FaPlusCircle, FaSync } from "react-icons/fa";
 import axios from "axios";
 
 const API_BASE = "http://localhost:3001/api";
@@ -25,6 +26,7 @@ const Dashboard = () => {
     const [stats, setStats] = useState({ districtCount: 0, congregationCount: 0 });
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const { colorMode } = useColorMode();
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -40,7 +42,21 @@ const Dashboard = () => {
         fetchStats();
     }, []);
 
-    const cardBg = "rgba(255, 255, 255, 0.85)";
+    // Theme-specific values
+    const overlayColor = useColorModeValue("rgba(255, 255, 255, 0.6)", "rgba(0, 0, 0, 0.7)");
+    const cardBg = useColorModeValue("rgba(255, 255, 255, 0.9)", "rgba(255, 255, 255, 0.85)");
+    const darkCardBg = useColorModeValue("rgba(0, 0, 0, 0.05)", "rgba(0, 0, 0, 0.4)");
+    const titleColor = useColorModeValue("blue.800", "white");
+    const statNumColor = useColorModeValue("blue.600", "blue.900");
+    const emeraldStatColor = useColorModeValue("green.600", "emerald.900");
+    const contrastText = useColorModeValue("gray.800", "white");
+    const subTitleColor = useColorModeValue("blue.600", "blue.200");
+    const districtBorderColor = useColorModeValue("blue.100", "whiteAlpha.500");
+    const localeBorderColor = useColorModeValue("green.100", "whiteAlpha.500");
+    const dataMgmtBorderColor = useColorModeValue("orange.100", "whiteAlpha.100");
+    const dataMgmtLabelColor = useColorModeValue("gray.500", "gray.400");
+    const syncBg = useColorModeValue("blackAlpha.50", "whiteAlpha.100");
+    const syncHoverBg = useColorModeValue("blackAlpha.100", "whiteAlpha.200");
     const blurEffect = "blur(15px)";
 
     return (
@@ -60,8 +76,9 @@ const Dashboard = () => {
                 left="0"
                 w="100%"
                 h="100%"
-                bgGradient="radial(circle at center, transparent, rgba(0,0,0,0.7))"
-                backdropFilter="brightness(0.6)"
+                bg={overlayColor}
+                backdropFilter={colorMode === 'light' ? "brightness(1.1) blur(2px)" : "brightness(0.6)"}
+                transition="all 0.5s ease"
             />
 
             <Flex
@@ -83,19 +100,19 @@ const Dashboard = () => {
                             <Text
                                 fontSize={{ base: "3xl", md: "5xl" }}
                                 fontWeight="black"
-                                color="white"
+                                color={titleColor}
                                 letterSpacing="tighter"
-                                textShadow="0 4px 10px rgba(0,0,0,0.3)"
+                                textShadow={colorMode === 'dark' ? "0 4px 10px rgba(0,0,0,0.3)" : "none"}
                             >
                                 DIRECTORY DASHBOARD
                             </Text>
-                            <Text color="blue.200" fontWeight="bold" fontSize="lg">
+                            <Text color={subTitleColor} fontWeight="bold" fontSize="lg">
                                 Iglesia Ni Cristo Management System
                             </Text>
                         </VStack>
                     </motion.div>
 
-                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={8} w="100%">
+                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10} w="100%">
                         {/* DISTRICTS STAT */}
                         <Box
                             as={motion.div}
@@ -109,7 +126,8 @@ const Dashboard = () => {
                                 p={8}
                                 borderRadius="3xl"
                                 shadow="2xl"
-                                border="1px solid rgba(255, 255, 255, 0.5)"
+                                border="1px solid"
+                                borderColor={districtBorderColor}
                                 textAlign="center"
                             >
                                 <VStack spacing={4}>
@@ -117,7 +135,7 @@ const Dashboard = () => {
                                     <Stat>
                                         <StatLabel fontWeight="black" color="gray.500" fontSize="sm">TOTAL DISTRICTS</StatLabel>
                                         {loading ? <Spinner mt={2} /> : (
-                                            <StatNumber fontSize="5xl" fontWeight="black" color="blue.900">
+                                            <StatNumber fontSize="5xl" fontWeight="black" color={statNumColor}>
                                                 {stats.districtCount}
                                             </StatNumber>
                                         )}
@@ -145,23 +163,24 @@ const Dashboard = () => {
                                 p={8}
                                 borderRadius="3xl"
                                 shadow="2xl"
-                                border="1px solid rgba(255, 255, 255, 0.5)"
+                                border="1px solid"
+                                borderColor={localeBorderColor}
                                 textAlign="center"
                             >
                                 <VStack spacing={4}>
-                                    <Icon as={FaMapMarkerAlt} w={12} h={12} color="emerald.500" />
+                                    <Icon as={FaMapMarkerAlt} w={12} h={12} color="green.500" />
                                     <Stat>
                                         <StatLabel fontWeight="black" color="gray.500" fontSize="sm">LOCAL CONGREGATIONS</StatLabel>
                                         {loading ? <Spinner mt={2} /> : (
-                                            <StatNumber fontSize="5xl" fontWeight="black" color="emerald.900">
+                                            <StatNumber fontSize="5xl" fontWeight="black" color={emeraldStatColor}>
                                                 {stats.congregationCount}
                                             </StatNumber>
                                         )}
-                                        <StatHelpText color="emerald.400" fontWeight="bold">
+                                        <StatHelpText color="green.400" fontWeight="bold">
                                             Officially Registered
                                         </StatHelpText>
                                     </Stat>
-                                    <Text fontSize="xs" fontWeight="black" color="emerald.600" textTransform="uppercase">
+                                    <Text fontSize="xs" fontWeight="black" color="green.600" textTransform="uppercase">
                                         View Detailed Directory
                                     </Text>
                                 </VStack>
@@ -176,28 +195,29 @@ const Dashboard = () => {
                             cursor="pointer"
                         >
                             <Box
-                                bg="rgba(0, 0, 0, 0.4)"
+                                bg={darkCardBg}
                                 backdropFilter={blurEffect}
                                 p={8}
                                 borderRadius="3xl"
                                 shadow="2xl"
-                                border="1px solid rgba(255, 255, 255, 0.1)"
-                                color="white"
+                                border="1px solid"
+                                borderColor={dataMgmtBorderColor}
+                                color={contrastText}
                                 textAlign="center"
                             >
                                 <VStack spacing={4}>
                                     <Icon as={FaPlusCircle} w={12} h={12} color="orange.400" />
                                     <VStack spacing={1}>
-                                        <Text fontWeight="black" fontSize="sm" color="gray.400">DATA MANAGEMENT</Text>
+                                        <Text fontWeight="black" fontSize="sm" color={dataMgmtLabelColor}>DATA MANAGEMENT</Text>
                                         <Text fontSize="lg" fontWeight="bold">Regenerate Directory</Text>
                                     </VStack>
                                     <VStack w="100%" spacing={3}>
                                         <HStack
                                             w="100%"
                                             p={3}
-                                            bg="whiteAlpha.100"
+                                            bg={syncBg}
                                             borderRadius="xl"
-                                            _hover={{ bg: "whiteAlpha.200" }}
+                                            _hover={{ bg: syncHoverBg }}
                                         >
                                             <FaSync />
                                             <VStack align="start" spacing={0}>

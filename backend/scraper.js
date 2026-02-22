@@ -42,12 +42,34 @@ const runScraper = async (congregation, url) => {
                 schedule: "",
                 contact: "",
                 mapUrl: "",
-                navigateUrl: ""
+                navigateUrl: "",
+                latitude: null,
+                longitude: null,
+                imageUrl: ""
             };
+
+            // 0. Extract Locale Image (Try multiple common selectors)
+            const imgSelectors = ['.mdl-card__media img', '.locale-image img', '.single-view img'];
+            for (const selector of imgSelectors) {
+                const img = document.querySelector(selector);
+                if (img && img.src && img.src.startsWith('http')) {
+                    result.imageUrl = img.src;
+                    break;
+                }
+            }
+
+            // 4. Extract Name
+            const nameEl = document.querySelector('.mdl-card__title-text');
+            if (nameEl) {
+                result.name = nameEl.innerText.trim();
+            }
 
             const cards = document.querySelectorAll('.mdl-card__supporting-text');
             cards.forEach(card => {
                 const title = card.querySelector('.mdl-card__title-text')?.innerText || "";
+
+                // Backup name search if first one missed
+                if (!result.name && title) result.name = title;
 
                 // 1. Detect Schedule
                 if (title.includes("Worship Service Schedule")) {
@@ -86,7 +108,17 @@ const runScraper = async (congregation, url) => {
 
                         // Extract Navigate Link (Apple Maps usually has the coords)
                         const navLink = cardParent.querySelector('a[href*="maps.apple.com"]');
-                        if (navLink) result.navigateUrl = navLink.getAttribute('href');
+                        if (navLink) {
+                            const href = navLink.getAttribute('href');
+                            result.navigateUrl = href;
+
+                            // Extract Lat/Lng from Apple Maps link (usually q=lat,lng or q=lat,%20lng)
+                            const coordsMatch = href.match(/q=([-.\d]+),\s*([-.\d]+)/);
+                            if (coordsMatch) {
+                                result.latitude = parseFloat(coordsMatch[1]);
+                                result.longitude = parseFloat(coordsMatch[2]);
+                            }
+                        }
                     }
                 }
             });
@@ -94,9 +126,39 @@ const runScraper = async (congregation, url) => {
             return result;
         });
 
-        // Check for success
-        if (!detailsData.schedule && !detailsData.address) {
-            return { success: false, schedule: "<p>No data found.</p>" };
+        // 4. FALLBACK: If no official image, try to search Google Maps hero image
+        if (!detailsData.imageUrl && detailsData.latitude && detailsData.longitude) {
+            try {
+                // Use the extracted name for more accurate search, if not found use slug
+                const searchName = detailsData.name || congregation.replace(/-/g, ' ');
+                const searchQuery = `Iglesia Ni Cristo ${searchName} Local`;
+                const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}/@${detailsData.latitude},${detailsData.longitude},17z`;
+
+                const gPage = await browser.newPage();
+                // Set a realistic user agent
+                await gPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+                await gPage.goto(searchUrl, { waitUntil: "networkidle2", timeout: 15000 });
+
+                // Selector for the hero image in Google Maps (class 'aoRNLd' from user hint)
+                try {
+                    await gPage.waitForSelector('button.aoRNLd img', { timeout: 7000 });
+                    const gImg = await gPage.evaluate(() => {
+                        const img = document.querySelector('button.aoRNLd img');
+                        return img ? img.src : null;
+                    });
+                    if (gImg) {
+                        detailsData.imageUrl = gImg;
+                        console.log(`📸 Found Google Maps image for: ${searchName}`);
+                    }
+                } catch (selectorError) {
+                    console.log(`⚠️ No image element found for: ${searchName}`);
+                }
+
+                await gPage.close();
+            } catch (e) {
+                console.log("Google image fallback failed or timed out:", e.message);
+            }
         }
 
         return { ...detailsData, success: true };

@@ -148,14 +148,6 @@ const Settings = () => {
                 {/* Header */}
                 <Flex justify="space-between" align="center" mb={10}>
                     <HStack spacing={4}>
-                        <IconButton
-                            icon={<FaArrowLeft />}
-                            onClick={() => navigate("/")}
-                            variant="ghost"
-                            colorScheme="whiteAlpha"
-                            borderRadius="full"
-                            aria-label="Back"
-                        />
                         <VStack align="start" spacing={0}>
                             <Text fontSize="2xl" fontWeight="black" color="white" letterSpacing="tight">
                                 SYSTEM SETTINGS
