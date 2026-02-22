@@ -38,7 +38,9 @@ services:
     build:
       context: .
       args:
-        REACT_APP_API_URL: ${REACT_APP_API_URL}
+        # Use relative path "/" so all API calls go through Nginx proxy inside Docker
+        REACT_APP_API_URL: /
+        REACT_APP_SCRAPER_HOST: /
     container_name: inc-frontend
     restart: always
     ports:

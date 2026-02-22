@@ -12,22 +12,19 @@ import {
     Progress,
     Badge,
     Divider,
-    useBreakpointValue,
 } from "@chakra-ui/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaSync, FaDatabase, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
+import { FaSync, FaDatabase, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
 import axios from "axios";
 
-const API_BASE = "http://localhost:3001/api";
+const envApiUrl = process.env.REACT_APP_API_URL || "";
+const API_BASE = (envApiUrl === "/" ? "" : (envApiUrl || "http://localhost:3001")) + "/api";
 
 const Settings = () => {
-    const navigate = useNavigate();
     const toast = useToast();
     const [isSyncing, setIsSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState(null);
     const [syncStats, setSyncStats] = useState({ percentage: 0, currentDistrict: "" });
-    const isMobile = useBreakpointValue({ base: true, md: false });
 
     const handleSync = async () => {
         setIsSyncing(true);

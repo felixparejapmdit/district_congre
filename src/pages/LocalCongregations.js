@@ -53,8 +53,10 @@ import {
 // --- CONFIG ---
 const CENTRAL_OFFICE = { lat: 14.6508, lng: 121.0505 };
 const START_ADDRESS = "Iglesia+Ni+Cristo+-+Lokal+ng+Templo+Central,+1+Central+Ave,+New+Era+(Constitution+Hills),+Quezon+City,+1101+Metro+Manila";
-const API_BASE = "http://localhost:3001/api";
-const SCRAPER_BASE = "http://localhost:5001/api";
+const envApiUrl = process.env.REACT_APP_API_URL || "";
+const envScraperHost = process.env.REACT_APP_SCRAPER_HOST || "";
+const API_BASE = (envApiUrl === "/" ? "" : (envApiUrl || "http://localhost:3001")) + "/api";
+const SCRAPER_BASE = (envScraperHost === "/" ? "" : (envScraperHost || "http://localhost:5001")) + "/api";
 
 const LocalCongregations = () => {
     const navigate = useNavigate();

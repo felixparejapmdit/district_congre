@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Congregation Image Display</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .extractor-card {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #1a73e8;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            resize: none;
+            font-family: monospace;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        textarea:focus {
+            border-color: #1a73e8;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #1557b0;
+        }
+
+        /* Image Display Area */
+        #displayArea {
+            margin-top: 25px;
+            display: none;
+        }
+
+        .image-container {
+            border: 2px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fafafa;
+            display: inline-block;
+            width: 100%;
+        }
+
+        img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto;
+        }
+
+        .url-label {
+            font-size: 11px;
+            color: #777;
+            margin-top: 10px;
+            word-break: break-all;
+            background: #f9f9f9;
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        #toast {
+            visibility: hidden;
+            min-width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 30px;
+            padding: 10px;
+            position: fixed;
+            z-index: 1;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        #toast.show {
+            visibility: visible;
+            animation: fadein 0.5s;
+        }
+
+        @keyframes fadein {
+            from {
+                bottom: 0;
+                opacity: 0;
+            }
+
+            to {
+                bottom: 30px;
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="extractor-card">
+        <h2>Congregation Extractor</h2>
+        <p style="font-size: 14px; color: #555;">Paste HTML Element or Direct Image URL:</p>
+
+        <textarea id="rawInput" placeholder="Right-click Image > Inspect > Copy Element... then paste here."></textarea>
+
+        <button onclick="displayAndCopy()">Process & Show Image</button>
+
+        <div id="displayArea">
+            <div class="image-container">
+                <img id="congregationImg" src="" alt="Congregation Preview" onerror="handleImageError()">
+            </div>
+            <div id="urlText" class="url-label"></div>
+        </div>
+    </div>
+
+    <div id="toast">Link copied to clipboard!</div>
+
+    <script>
+        function displayAndCopy() {
+            const input = document.getElementById('rawInput').value.trim();
+            const img = document.getElementById('congregationImg');
+            const displayArea = document.getElementById('displayArea');
+            const urlText = document.getElementById('urlText');
+
+            let imageUrl = "";
+
+            // Check if the input is a direct URL
+            if (input.startsWith('http') && !input.includes('<')) {
+                imageUrl = input;
+            }
+            // Otherwise, treat it as an HTML snippet and find the <img> tag
+            else {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = input;
+                const foundImg = tempDiv.querySelector('img');
+                if (foundImg) {
+                    imageUrl = foundImg.getAttribute('src');
+                }
+            }
+
+            if (imageUrl) {
+                // Update the image source and show the area
+                img.src = imageUrl;
+                urlText.innerText = imageUrl;
+                displayArea.style.display = 'block';
+
+                // Auto-Copy to clipboard
+                navigator.clipboard.writeText(imageUrl).then(() => {
+                    showToast();
+                });
+            } else {
+                alert("No image found! Please make sure you are pasting the correct HTML element or a direct image link.");
+            }
+        }
+
+        function handleImageError() {
+            alert("The image could not be loaded. The URL might be expired or restricted.");
+            document.getElementById('displayArea').style.display = 'none';
+        }
+
+        function showToast() {
+            const x = document.getElementById("toast");
+            x.className = "show";
+            setTimeout(function () { x.className = x.className.replace("show", ""); }, 3000);
+        }
+    </script>
+
+</body>
+
+</html>

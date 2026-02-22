@@ -37,18 +37,18 @@ import {
     FaGlobeAsia,
     FaClock,
     FaPhoneAlt,
-    FaSyncAlt,
-    FaArrowLeft,
     FaDownload,
     FaCheckSquare,
     FaEraser
 } from "react-icons/fa";
 
-const SCRAPER_BASE = "http://localhost:5001/api";
-const DB_BASE = "http://localhost:3001/api";
+const envApiUrl = process.env.REACT_APP_API_URL || "";
+const envScraperHost = process.env.REACT_APP_SCRAPER_HOST || "";
+
+const SCRAPER_BASE = (envScraperHost === "/" ? "" : (envScraperHost || "http://localhost:5001")) + "/api";
+const DB_BASE = (envApiUrl === "/" ? "" : (envApiUrl || "http://localhost:3001")) + "/api";
 
 const DirectoryManager = () => {
-    const navigate = useNavigate();
     const toast = useToast();
     const [districts, setDistricts] = useState([]);
     const [filteredDistricts, setFilteredDistricts] = useState([]);

@@ -15,7 +15,7 @@ const syncRoutes = require("./routes/syncRoutes");
 
 const app = express();
 
-// Docker internal port is 3000, locally we use 3001 to avoid conflict
+// Docker sets PORT=3000 via docker-compose.yml; locally we use 3001 to avoid conflict with React dev server (port 3000)
 const PORT = process.env.PORT || 3001;
 const IP_ADDRESS = "0.0.0.0"; // Required for Docker to bind correctly
 

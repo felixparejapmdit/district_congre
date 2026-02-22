@@ -20,7 +20,8 @@ import { useNavigate } from "react-router-dom";
 import { FaGlobeAsia, FaMapMarkerAlt, FaPlusCircle, FaSync } from "react-icons/fa";
 import axios from "axios";
 
-const API_BASE = "http://localhost:3001/api";
+const envApiUrl = process.env.REACT_APP_API_URL || "";
+const API_BASE = (envApiUrl === "/" ? "" : (envApiUrl || "http://localhost:3001")) + "/api";
 
 const Dashboard = () => {
     const [stats, setStats] = useState({ districtCount: 0, congregationCount: 0 });

@@ -21,7 +21,7 @@ services:
     restart: always
     env_file: .env.proxmox
     environment:
-      - PORT=3001
+      - PORT=3000
     # Use host network to avoid LXC permission issues
     network_mode: "host"
     depends_on:
@@ -32,6 +32,7 @@ services:
       context: .
       args:
         - REACT_APP_API_URL=${REACT_APP_API_URL}
+        - REACT_APP_SCRAPER_HOST=${REACT_APP_SCRAPER_HOST}
     container_name: inc-frontend
     restart: always
     # Use host network to avoid LXC permission issues
