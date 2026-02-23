@@ -487,6 +487,12 @@ const LocalCongregations = () => {
                         ) : selectedLocale ? (
                             <VStack align="stretch" spacing={0}>
                                 <VStack p={6} spacing={8} align="stretch">
+                                    {/* --- LOCALE & DISTRICT DISPLAY --- */}
+                                    <VStack align="start" spacing={0} mb={-4}>
+                                        <Text fontSize="2xl" fontWeight="black" color={titleColor}>{selectedLocale.name}</Text>
+                                        <Text fontSize="xs" fontWeight="black" color="blue.500">DISTRICT OF {currentDistrictName?.toUpperCase()}</Text>
+                                    </VStack>
+
                                     {/* Action Buttons */}
                                     <HStack spacing={4}>
                                         <Button
