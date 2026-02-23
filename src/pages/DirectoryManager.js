@@ -46,7 +46,7 @@ import {
 const envApiUrl = process.env.REACT_APP_API_URL || "";
 const envScraperHost = process.env.REACT_APP_SCRAPER_HOST || "";
 
-const SCRAPER_BASE = (envScraperHost === "/" ? "" : (envScraperHost || "http://localhost:5001")) + "/api";
+const SCRAPER_BASE = (envScraperHost === "/" ? "" : (envScraperHost || "http://localhost:3001")) + "/api";
 const DB_BASE = (envApiUrl === "/" ? "" : (envApiUrl || "http://localhost:3001")) + "/api";
 
 const DirectoryManager = () => {
@@ -122,7 +122,7 @@ const DirectoryManager = () => {
         try {
             // Fetch from both to get IDs for export
             const [webRes, dbRes] = await Promise.all([
-                axios.get(`${SCRAPER_BASE}/districts`),
+                axios.get(`${SCRAPER_BASE}/scraper/districts`),
                 axios.get(`${DB_BASE}/districts`)
             ]);
 
@@ -157,7 +157,7 @@ const DirectoryManager = () => {
         setFilteredLocales([]);
         setLoadingLocales(true);
         try {
-            const { data } = await axios.get(`${SCRAPER_BASE}/locales?path=${encodeURIComponent(district.path)}`);
+            const { data } = await axios.get(`${SCRAPER_BASE}/scraper/locales?path=${encodeURIComponent(district.path)}`);
             const parser = new DOMParser();
             const doc = parser.parseFromString(data, 'text/html');
             const links = doc.querySelectorAll('.mdl-grid a[href*="/locales/"]');

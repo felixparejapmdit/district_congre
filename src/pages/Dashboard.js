@@ -11,23 +11,31 @@ import {
     StatLabel,
     StatNumber,
     StatHelpText,
-    Spinner,
     useColorModeValue,
     useColorMode,
+    Skeleton
 } from "@chakra-ui/react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { FaGlobeAsia, FaMapMarkerAlt, FaPlusCircle, FaSync } from "react-icons/fa";
+import { FaGlobeAsia, FaMapMarkerAlt, FaPlusCircle, FaSync, FaChartPie, FaChartLine } from "react-icons/fa";
+import { BarChart, Bar, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import axios from "axios";
 
 const envApiUrl = process.env.REACT_APP_API_URL || "";
 const API_BASE = (envApiUrl === "/" ? "" : (envApiUrl || "http://localhost:3001")) + "/api";
 
 const Dashboard = () => {
-    const [stats, setStats] = useState({ districtCount: 0, congregationCount: 0 });
+    const [stats, setStats] = useState({
+        districtCount: 0,
+        congregationCount: 0,
+        regionalStats: [],
+        syncHistory: []
+    });
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { colorMode } = useColorMode();
+
+    const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -140,11 +148,11 @@ const Dashboard = () => {
                                     <Icon as={FaGlobeAsia} w={12} h={12} color="blue.500" />
                                     <Stat>
                                         <StatLabel fontWeight="black" color={statLabelColor} fontSize="sm">TOTAL DISTRICTS</StatLabel>
-                                        {loading ? <Spinner mt={2} /> : (
+                                        <Skeleton isLoaded={!loading} h="60px" w="120px" mx="auto" mt={2}>
                                             <StatNumber fontSize="5xl" fontWeight="black" color={statNumColor}>
                                                 {stats.districtCount}
                                             </StatNumber>
-                                        )}
+                                        </Skeleton>
                                         <StatHelpText color={statHelpTextBlue} fontWeight="bold">
                                             Across the Globe
                                         </StatHelpText>
@@ -177,11 +185,11 @@ const Dashboard = () => {
                                     <Icon as={FaMapMarkerAlt} w={12} h={12} color="green.500" />
                                     <Stat>
                                         <StatLabel fontWeight="black" color={statLabelColor} fontSize="sm">LOCAL CONGREGATIONS</StatLabel>
-                                        {loading ? <Spinner mt={2} /> : (
+                                        <Skeleton isLoaded={!loading} h="60px" w="120px" mx="auto" mt={2}>
                                             <StatNumber fontSize="5xl" fontWeight="black" color={emeraldStatColor}>
                                                 {stats.congregationCount}
                                             </StatNumber>
-                                        )}
+                                        </Skeleton>
                                         <StatHelpText color={statHelpTextGreen} fontWeight="bold">
                                             Officially Registered
                                         </StatHelpText>
@@ -236,6 +244,62 @@ const Dashboard = () => {
                             </Box>
                         </Box>
                     </SimpleGrid>
+
+                    {/* NEW: VISUALIZATIONS SECTION */}
+                    <Box
+                        as={motion.div}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        bg={cardBg}
+                        backdropFilter={blurEffect}
+                        p={6}
+                        borderRadius="3xl"
+                        shadow="xl"
+                        border="1px solid"
+                        borderColor={districtBorderColor}
+                        w="100%"
+                        minH="450px"
+                    >
+                        <VStack h="100%" spacing={6} align="stretch">
+                            <HStack w="100%" justify="space-between">
+                                <HStack>
+                                    <Icon as={FaChartPie} color="blue.400" />
+                                    <Text fontWeight="black" fontSize="md" color={titleColor}>REGIONAL DISTRIBUTION</Text>
+                                </HStack>
+                                <Text fontSize="xs" fontWeight="bold" color="gray.400">Congregations per Region</Text>
+                            </HStack>
+                            <Skeleton isLoaded={!loading} w="100%" h="350px" borderRadius="xl">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart
+                                        data={stats.regionalStats}
+                                        layout="vertical"
+                                        margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
+                                        <XAxis type="number" hide />
+                                        <YAxis
+                                            dataKey="name"
+                                            type="category"
+                                            width={140}
+                                            fontSize={10}
+                                            fontWeight="bold"
+                                            tick={{ fill: titleColor }}
+                                        />
+                                        <RechartsTooltip
+                                            contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                                            cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                        />
+                                        <Bar dataKey="value" radius={[0, 10, 10, 0]}>
+                                            {stats.regionalStats.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </Skeleton>
+                        </VStack>
+                    </Box>
                 </VStack>
             </Flex>
         </Box>

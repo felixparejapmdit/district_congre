@@ -5,6 +5,7 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const http = require("http"); // We only need HTTP inside the container
 const sequelize = require("./config/database");
+const models = require("./models"); // Initializes associations and models
 
 const districtsRoutes = require("./routes/districtsRoutes");
 const localCongregationRoutes = require("./routes/localCongregationRoutes");
@@ -12,6 +13,8 @@ const scraperRoutes = require("./routes/scraperRoutes");
 const exportRoutes = require('./routes/exportRoutes');
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const syncRoutes = require("./routes/syncRoutes");
+const auditRoutes = require("./routes/auditRoutes");
+const scheduler = require("./scheduler");
 
 const app = express();
 
@@ -33,12 +36,15 @@ app.use(localCongregationRoutes);
 app.use("/api", exportRoutes);
 app.use(dashboardRoutes);
 app.use(syncRoutes);
+app.use(auditRoutes);
 
 // Start simple HTTP server (Nginx will handle the HTTPS part)
 sequelize.sync({ alter: true }).then(() => {
   console.log("✅ Database synced successfully");
   http.createServer(app).listen(PORT, IP_ADDRESS, () => {
     console.log(`✅ Backend running internally on port ${PORT}`);
+    // Start the background scheduler (persists across page refreshes, not Docker restarts)
+    scheduler.startScheduler();
   });
 }).catch((err) => {
   console.error("❌ Database sync failed:", err);

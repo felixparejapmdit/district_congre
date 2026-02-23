@@ -89,5 +89,6 @@ const LocalCongregation = sequelize.define(
 
 // ✅ Define the association
 LocalCongregation.belongsTo(District, { foreignKey: "district_id" });
+District.hasMany(LocalCongregation, { foreignKey: "district_id" });
 
 module.exports = LocalCongregation;

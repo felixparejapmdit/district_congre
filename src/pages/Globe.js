@@ -38,7 +38,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "../styles.css";
-import { FaCheckSquare, FaDownload, FaEraser, FaBars, FaMapMarkerAlt, FaGlobeAsia, FaFileExcel, FaCloudDownloadAlt, FaFileAlt } from "react-icons/fa";
+import { FaCheckSquare, FaDownload, FaEraser, FaBars, FaMapMarkerAlt, FaGlobeAsia, FaFileAlt } from "react-icons/fa";
 
 
 

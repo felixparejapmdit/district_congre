@@ -24,7 +24,7 @@ const App = () => {
 
   return (
     <ChakraProvider theme={theme}>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Flex direction="column" width="100vw" height="100vh" overflow="hidden">
 
           {/* MOBILE: Hamburger Button + Drawer */}

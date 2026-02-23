@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box,
     Flex,
@@ -12,9 +12,23 @@ import {
     Progress,
     Badge,
     Divider,
+    Switch,
+    Select,
+    Tabs,
+    TabList,
+    TabPanels,
+    Tab,
+    TabPanel,
+    Table,
+    Thead,
+    Tbody,
+    Tr,
+    Th,
+    Td,
+    TableContainer,
+    Input as ChakraInput
 } from "@chakra-ui/react";
-import { motion, AnimatePresence } from "framer-motion";
-import { FaSync, FaDatabase, FaCheckCircle, FaExclamationTriangle } from "react-icons/fa";
+import { FaSync, FaDatabase, FaCheckCircle, FaExclamationTriangle, FaCalendarAlt, FaMapPin, FaListAlt, FaCompass } from "react-icons/fa";
 import axios from "axios";
 
 const envApiUrl = process.env.REACT_APP_API_URL || "";
@@ -24,7 +38,83 @@ const Settings = () => {
     const toast = useToast();
     const [isSyncing, setIsSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState(null);
-    const [syncStats, setSyncStats] = useState({ percentage: 0, currentDistrict: "" });
+    const [syncStats, setSyncStats] = useState({ percentage: 0, currentDistrict: "", currentLocale: "" });
+
+    // Scheduler state
+    // Scheduler state
+    const [schedulerStatus, setSchedulerStatus] = useState(null);
+    const [schedulerLoading, setSchedulerLoading] = useState(false);
+    const [selectedCron, setSelectedCron] = useState("0 0 * * *");
+
+    const CRON_OPTIONS = [
+        { label: "Every day at 12:00 AM (Midnight)", value: "0 0 * * *" },
+        { label: "Every day at 2:00 AM", value: "0 2 * * *" },
+        { label: "Every day at 3:00 AM", value: "0 3 * * *" },
+        { label: "Every 6 hours", value: "0 */6 * * *" },
+        { label: "Every 12 hours", value: "0 */12 * * *" },
+    ];
+
+    // Reference Point state
+    const [refPoint, setRefPoint] = useState({ lat: 14.6508, lng: 121.0505, name: "Templo Central" });
+    const [auditLogs, setAuditLogs] = useState([]);
+
+    const fetchSchedulerStatus = async () => {
+        try {
+            const { data } = await axios.get(`${API_BASE}/scheduler/status`);
+            setSchedulerStatus(data);
+            if (data.cronExpression) setSelectedCron(data.cronExpression);
+        } catch { /* silent */ }
+    };
+
+    const fetchRefPoint = async () => {
+        try {
+            const { data } = await axios.get(`${API_BASE}/config/reference-point`);
+            setRefPoint(data);
+        } catch { /* silent */ }
+    };
+
+    const fetchAuditLogs = async () => {
+        try {
+            const [logsRes] = await Promise.all([
+                axios.get(`${API_BASE}/audit/logs`),
+                axios.get(`${API_BASE}/audit/history`) // keeping call for side effect or simplify if truly unneeded
+            ]);
+            setAuditLogs(logsRes.data);
+        } catch { /* silent */ }
+    };
+
+    useEffect(() => {
+        fetchSchedulerStatus();
+        fetchRefPoint();
+        fetchAuditLogs();
+    }, []);
+
+    const updateRefPoint = async () => {
+        try {
+            await axios.post(`${API_BASE}/config/reference-point`, refPoint);
+            toast({ title: "Reference Point Updated", status: "success", duration: 3000 });
+        } catch (err) {
+            toast({ title: "Error", description: "Failed to update coordinates.", status: "error" });
+        }
+    };
+
+    const handleSchedulerToggle = async (enable) => {
+        setSchedulerLoading(true);
+        try {
+            if (enable) {
+                await axios.post(`${API_BASE}/scheduler/enable`, { cronExpression: selectedCron });
+                toast({ title: "Scheduler Enabled", description: "Auto-sync will run as scheduled.", status: "success", duration: 3000 });
+            } else {
+                await axios.post(`${API_BASE}/scheduler/disable`);
+                toast({ title: "Scheduler Disabled", description: "Auto-sync has been turned off.", status: "warning", duration: 3000 });
+            }
+            await fetchSchedulerStatus();
+        } catch (err) {
+            toast({ title: "Error", description: err.response?.data?.message || "Failed to update scheduler.", status: "error", duration: 3000 });
+        } finally {
+            setSchedulerLoading(false);
+        }
+    };
 
     const handleSync = async () => {
         setIsSyncing(true);
@@ -86,7 +176,8 @@ const Settings = () => {
                 const { data } = await axios.get(`${API_BASE}/sync/progress`);
                 setSyncStats({
                     percentage: data.percentage,
-                    currentDistrict: data.currentDistrict
+                    currentDistrict: data.currentDistrict,
+                    currentLocale: data.currentLocale || ""
                 });
                 if (data.status === "completed" || data.status === "failed") {
                     clearInterval(pollInterval);
@@ -135,153 +226,284 @@ const Settings = () => {
                 backdropFilter="brightness(0.6)"
             />
 
-            <Flex
-                position="relative"
-                zIndex="1"
-                direction="column"
-                h="100%"
-                p={6}
-            >
-                {/* Header */}
-                <Flex justify="space-between" align="center" mb={10}>
-                    <HStack spacing={4}>
-                        <VStack align="start" spacing={0}>
-                            <Text fontSize="2xl" fontWeight="black" color="white" letterSpacing="tight">
-                                SYSTEM SETTINGS
-                            </Text>
-                            <Text color="blue.300" fontSize="xs" fontWeight="bold" letterSpacing="widest">
-                                DATABASE MANAGEMENT & SYNCHRONIZATION
-                            </Text>
-                        </VStack>
-                    </HStack>
-                </Flex>
+            <Flex flex="1" justify="center" align="start" overflowY="auto" pt={10} pb={20}>
+                <Box
+                    w="100%"
+                    maxW="1000px"
+                    bg="rgba(255, 255, 255, 0.95)"
+                    backdropFilter="blur(20px)"
+                    borderRadius="3xl"
+                    p={2}
+                    shadow="2xl"
+                    border="1px solid rgba(255, 255, 255, 0.4)"
+                >
+                    <Tabs isFitted variant="soft-rounded" colorScheme="blue">
+                        <TabList p={4} gap={4}>
+                            <Tab borderRadius="2xl" fontWeight="black" fontSize="xs">
+                                <HStack><Icon as={FaDatabase} /><Text>DATA REFRESH</Text></HStack>
+                            </Tab>
+                            <Tab borderRadius="2xl" fontWeight="black" fontSize="xs">
+                                <HStack><Icon as={FaCompass} /><Text>MAP CONFIG</Text></HStack>
+                            </Tab>
+                            <Tab borderRadius="2xl" fontWeight="black" fontSize="xs" onClick={fetchAuditLogs}>
+                                <HStack><Icon as={FaListAlt} /><Text>AUDIT LOGS</Text></HStack>
+                            </Tab>
+                        </TabList>
 
-                <Flex flex="1" justify="center" align="center">
-                    <Box
-                        w="100%"
-                        maxW="800px"
-                        bg="rgba(255, 255, 255, 0.9)"
-                        backdropFilter="blur(20px)"
-                        borderRadius="3xl"
-                        p={8}
-                        shadow="2xl"
-                        border="1px solid rgba(255, 255, 255, 0.4)"
-                    >
-                        <VStack spacing={8} align="stretch">
-                            <Flex justify="space-between" align="center">
-                                <HStack spacing={4}>
-                                    <Box p={3} bg="blue.500" borderRadius="2xl" color="white" shadow="lg">
-                                        <FaDatabase size={24} />
-                                    </Box>
-                                    <VStack align="start" spacing={0}>
-                                        <Text fontSize="xl" fontWeight="black" color="gray.800">Directory Generation</Text>
-                                        <Text fontSize="sm" color="gray.500" fontWeight="medium">Update Local Database from Official INC Directory</Text>
-                                    </VStack>
-                                </HStack>
-                            </Flex>
-
-                            <Box p={6} bg="blue.50" borderRadius="2xl" border="1px dashed" borderColor="blue.200">
-                                <VStack spacing={4} align="start">
-                                    <HStack spacing={3} color="blue.700">
-                                        <FaExclamationTriangle />
-                                        <Text fontWeight="bold" fontSize="sm">Synchronization Policy</Text>
-                                    </HStack>
-                                    <Text fontSize="sm" color="blue.600">
-                                        This process will scrape the official directory and update your local tables (Districts and Local Congregations).
-                                        <strong> Existing IDs are preserved</strong> to maintain compatibility with external API consumers.
-                                    </Text>
-                                </VStack>
-                            </Box>
-
-                            <Box>
-                                {isSyncing ? (
-                                    <VStack spacing={6} py={10}>
-                                        <Box w="100%" position="relative">
-                                            <Progress
-                                                size="lg"
-                                                value={syncStats.percentage}
-                                                borderRadius="full"
-                                                colorScheme="blue"
-                                                bg="blue.100"
-                                                hasStripe
-                                                isAnimated
-                                            />
-                                            <Text
-                                                position="absolute"
-                                                top="-25px"
-                                                right="0"
-                                                fontSize="sm"
-                                                fontWeight="black"
-                                                color="blue.600"
-                                            >
-                                                {syncStats.percentage}%
-                                            </Text>
+                        <TabPanels>
+                            {/* PANEL 1: DATA REFRESH & SCHEDULER */}
+                            <TabPanel p={8}>
+                                <VStack spacing={8} align="stretch">
+                                    <HStack spacing={4}>
+                                        <Box p={3} bg="blue.500" borderRadius="2xl" color="white" shadow="lg">
+                                            <FaDatabase size={24} />
                                         </Box>
-                                        <VStack spacing={2}>
-                                            <Text fontWeight="black" color="blue.600" letterSpacing="widest" fontSize="sm" textTransform="uppercase">
-                                                Syncing: {syncStats.currentDistrict}
-                                            </Text>
-                                            <Text fontSize="xs" color="gray.500" textAlign="center">
-                                                Please do not close this window. We are fetching and updating records.
+                                        <VStack align="start" spacing={0}>
+                                            <Text fontSize="xl" fontWeight="black" color="gray.800">Directory Generation</Text>
+                                            <Text fontSize="sm" color="gray.500" fontWeight="medium">Update Local Database from Official INC Directory</Text>
+                                        </VStack>
+                                    </HStack>
+
+                                    <Box p={6} bg="blue.50" borderRadius="2xl" border="1px dashed" borderColor="blue.200">
+                                        <VStack spacing={4} align="start">
+                                            <HStack spacing={3} color="blue.700">
+                                                <FaExclamationTriangle />
+                                                <Text fontWeight="bold" fontSize="sm">Synchronization Policy</Text>
+                                            </HStack>
+                                            <Text fontSize="sm" color="blue.600">
+                                                This process will scrape the official directory and update your local tables.
+                                                <strong> Existing IDs are preserved</strong> to maintain compatibility.
                                             </Text>
                                         </VStack>
-                                    </VStack>
-                                ) : (
-                                    <Button
-                                        size="lg"
-                                        w="100%"
-                                        colorScheme="blue"
-                                        leftIcon={<FaSync />}
-                                        onClick={handleSync}
-                                        borderRadius="2xl"
-                                        h="70px"
-                                        fontSize="lg"
-                                        fontWeight="black"
-                                        shadow="xl"
-                                        _hover={{ transform: "translateY(-2px)", shadow: "2xl" }}
-                                    >
-                                        GENERATE DATA
-                                    </Button>
-                                )}
-                            </Box>
+                                    </Box>
 
-                            <AnimatePresence>
-                                {syncResult && (
-                                    <Box
-                                        as={motion.div}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        p={6}
-                                        bg="emerald.50"
-                                        borderRadius="2xl"
-                                        border="1px solid"
-                                        borderColor="emerald.200"
-                                    >
-                                        <VStack align="stretch" spacing={4}>
-                                            <HStack color="emerald.600" spacing={2}>
+                                    <Box>
+                                        {isSyncing ? (
+                                            <VStack spacing={6} py={10}>
+                                                <Box w="100%" position="relative">
+                                                    <Progress
+                                                        size="lg"
+                                                        value={syncStats.percentage}
+                                                        borderRadius="full"
+                                                        colorScheme="blue"
+                                                        bg="blue.100"
+                                                        hasStripe
+                                                        isAnimated
+                                                    />
+                                                    <Text position="absolute" top="-25px" right="0" fontSize="sm" fontWeight="black" color="blue.600">
+                                                        {syncStats.percentage}%
+                                                    </Text>
+                                                </Box>
+                                                <VStack spacing={2}>
+                                                    <Text fontWeight="black" color="blue.600" letterSpacing="widest" fontSize="sm" textTransform="uppercase">
+                                                        District: {syncStats.currentDistrict}
+                                                    </Text>
+                                                    {syncStats.currentLocale && (
+                                                        <Text fontSize="xs" color="blue.400" fontWeight="bold" textTransform="uppercase">
+                                                            ↳ Enriching: {syncStats.currentLocale}
+                                                        </Text>
+                                                    )}
+                                                </VStack>
+                                            </VStack>
+                                        ) : (
+                                            <Button
+                                                size="lg"
+                                                w="100%"
+                                                colorScheme="blue"
+                                                leftIcon={<FaSync />}
+                                                onClick={handleSync}
+                                                borderRadius="2xl"
+                                                h="70px"
+                                                fontSize="lg"
+                                                fontWeight="black"
+                                                shadow="xl"
+                                            >
+                                                GENERATE DATA
+                                            </Button>
+                                        )}
+                                    </Box>
+
+                                    {syncResult && (
+                                        <Box p={6} bg="emerald.50" borderRadius="2xl" border="1px solid" borderColor="emerald.200">
+                                            <HStack color="emerald.600" spacing={2} mb={4}>
                                                 <FaCheckCircle />
                                                 <Text fontWeight="black">SYNC RESULTS</Text>
                                             </HStack>
-                                            <Divider borderColor="emerald.200" />
                                             <SimpleGrid columns={2} spacing={4}>
                                                 <VStack align="start" spacing={0}>
                                                     <Text fontSize="xs" color="emerald.600" fontWeight="bold">DISTRICTS PROCESSED</Text>
-                                                    <Text fontSize="xl" fontWeight="black" color="emerald.900">{syncResult.stats.districtsProcessed}</Text>
-                                                    <Badge colorScheme="emerald" size="sm">+{syncResult.stats.districtsCreated} NEW</Badge>
+                                                    <Text fontSize="xl" fontWeight="black">{syncResult.stats.districtsProcessed}</Text>
                                                 </VStack>
                                                 <VStack align="start" spacing={0}>
                                                     <Text fontSize="xs" color="emerald.600" fontWeight="bold">LOCALES PROCESSED</Text>
-                                                    <Text fontSize="xl" fontWeight="black" color="emerald.900">{syncResult.stats.localesProcessed}</Text>
-                                                    <Badge colorScheme="emerald" size="sm">+{syncResult.stats.localesCreated} NEW</Badge>
+                                                    <Text fontSize="xl" fontWeight="black">{syncResult.stats.localesProcessed}</Text>
                                                 </VStack>
                                             </SimpleGrid>
+                                        </Box>
+                                    )}
+
+                                    <Divider />
+
+                                    {/* Scheduler Section */}
+                                    <Box>
+                                        <Flex justify="space-between" align="center" mb={5}>
+                                            <HStack spacing={4}>
+                                                <Box p={3} bg="purple.500" borderRadius="2xl" color="white" shadow="lg">
+                                                    <FaCalendarAlt size={24} />
+                                                </Box>
+                                                <VStack align="start" spacing={0}>
+                                                    <Text fontSize="xl" fontWeight="black" color="gray.800">Auto-Sync Scheduler</Text>
+                                                    <Text fontSize="sm" color="gray.500" fontWeight="medium">Scheduled background synchronization</Text>
+                                                </VStack>
+                                            </HStack>
+                                            <Switch
+                                                colorScheme="purple"
+                                                size="lg"
+                                                isChecked={schedulerStatus?.enabled || false}
+                                                isDisabled={schedulerLoading}
+                                                onChange={(e) => handleSchedulerToggle(e.target.checked)}
+                                            />
+                                        </Flex>
+
+                                        <VStack spacing={4} align="stretch">
+                                            <Select
+                                                value={selectedCron}
+                                                onChange={(e) => setSelectedCron(e.target.value)}
+                                                borderRadius="xl"
+                                                fontWeight="bold"
+                                                isDisabled={schedulerStatus?.enabled || schedulerLoading}
+                                            >
+                                                {CRON_OPTIONS.map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </Select>
+
+                                            {schedulerStatus && (
+                                                <SimpleGrid columns={2} spacing={4}>
+                                                    <Box p={4} bg="gray.50" borderRadius="2xl" border="1px solid" borderColor="gray.200">
+                                                        <Text fontSize="9px" fontWeight="black" color="gray.500">LAST RUN</Text>
+                                                        <Text fontSize="sm" fontWeight="black">{schedulerStatus.lastRun ? new Date(schedulerStatus.lastRun).toLocaleString() : "Never"}</Text>
+                                                        <Badge colorScheme={schedulerStatus.lastRunStatus === "success" ? "green" : "red"}>{schedulerStatus.lastRunStatus}</Badge>
+                                                    </Box>
+                                                    <Box p={4} bg="purple.50" borderRadius="2xl" border="1px solid" borderColor="purple.200">
+                                                        <Text fontSize="9px" fontWeight="black" color="purple.500">NEXT RUN</Text>
+                                                        <Text fontSize="sm" fontWeight="black">{schedulerStatus.enabled ? new Date(schedulerStatus.nextRun).toLocaleString() : "—"}</Text>
+                                                        <Text fontSize="9px" color="purple.400">{schedulerStatus.description}</Text>
+                                                    </Box>
+                                                </SimpleGrid>
+                                            )}
                                         </VStack>
                                     </Box>
-                                )}
-                            </AnimatePresence>
-                        </VStack>
-                    </Box>
-                </Flex>
+                                </VStack>
+                            </TabPanel>
+
+                            {/* PANEL 2: MAP CONFIGURATION */}
+                            <TabPanel p={8}>
+                                <VStack spacing={8} align="stretch">
+                                    <HStack spacing={4}>
+                                        <Box p={3} bg="red.500" borderRadius="2xl" color="white" shadow="lg">
+                                            <FaMapPin size={24} />
+                                        </Box>
+                                        <VStack align="start" spacing={0}>
+                                            <Text fontSize="xl" fontWeight="black" color="gray.800">Distance Reference Point</Text>
+                                            <Text fontSize="sm" color="gray.500" fontWeight="medium">Set the point used for distance & travel calculations</Text>
+                                        </VStack>
+                                    </HStack>
+
+                                    <Box p={6} borderRadius="3xl" bg="gray.50" border="1px solid" borderColor="gray.200">
+                                        <VStack spacing={6} align="stretch">
+                                            <Box>
+                                                <Text fontSize="xs" fontWeight="black" color="gray.400" mb={2}>LOCATION NAME</Text>
+                                                <ChakraInput
+                                                    value={refPoint.name}
+                                                    onChange={(e) => setRefPoint({ ...refPoint, name: e.target.value })}
+                                                    bg="white"
+                                                    borderRadius="xl"
+                                                    fontWeight="bold"
+                                                />
+                                            </Box>
+                                            <SimpleGrid columns={2} spacing={6}>
+                                                <Box>
+                                                    <Text fontSize="xs" fontWeight="black" color="gray.400" mb={2}>LATITUDE</Text>
+                                                    <ChakraInput
+                                                        type="number"
+                                                        value={refPoint.lat}
+                                                        onChange={(e) => setRefPoint({ ...refPoint, lat: parseFloat(e.target.value) })}
+                                                        bg="white"
+                                                        borderRadius="xl"
+                                                        fontWeight="bold"
+                                                    />
+                                                </Box>
+                                                <Box>
+                                                    <Text fontSize="xs" fontWeight="black" color="gray.400" mb={2}>LONGITUDE</Text>
+                                                    <ChakraInput
+                                                        type="number"
+                                                        value={refPoint.lng}
+                                                        onChange={(e) => setRefPoint({ ...refPoint, lng: parseFloat(e.target.value) })}
+                                                        bg="white"
+                                                        borderRadius="xl"
+                                                        fontWeight="bold"
+                                                    />
+                                                </Box>
+                                            </SimpleGrid>
+                                            <Button
+                                                colorScheme="red"
+                                                h="60px"
+                                                borderRadius="2xl"
+                                                fontWeight="black"
+                                                onClick={updateRefPoint}
+                                            >
+                                                SAVE REFERENCE POINT
+                                            </Button>
+                                        </VStack>
+                                    </Box>
+                                </VStack>
+                            </TabPanel>
+
+                            {/* PANEL 3: AUDIT LOGS */}
+                            <TabPanel p={8}>
+                                <VStack spacing={8} align="stretch">
+                                    <HStack spacing={4}>
+                                        <Box p={3} bg="gray.800" borderRadius="2xl" color="white" shadow="lg">
+                                            <FaListAlt size={24} />
+                                        </Box>
+                                        <VStack align="start" spacing={0}>
+                                            <Text fontSize="xl" fontWeight="black" color="gray.800">Change Audit Logs</Text>
+                                            <Text fontSize="sm" color="gray.500" fontWeight="medium">Track data changes detected during synchronization</Text>
+                                        </VStack>
+                                    </HStack>
+
+                                    <TableContainer borderRadius="2xl" border="1px solid" borderColor="gray.200">
+                                        <Table variant="simple" size="sm">
+                                            <Thead bg="gray.50">
+                                                <Tr>
+                                                    <Th>LOCALE</Th>
+                                                    <Th>FIELD</Th>
+                                                    <Th>OLD VALUE</Th>
+                                                    <Th>NEW VALUE</Th>
+                                                    <Th>TIMESTAMP</Th>
+                                                </Tr>
+                                            </Thead>
+                                            <Tbody>
+                                                {auditLogs.length > 0 ? auditLogs.map(log => (
+                                                    <Tr key={log.id}>
+                                                        <Td fontWeight="bold">{log.locale_name}</Td>
+                                                        <Td><Badge colorScheme="blue">{log.field_name}</Badge></Td>
+                                                        <Td fontSize="10px" maxW="150px" isTruncated color="gray.500">{log.old_value}</Td>
+                                                        <Td fontSize="10px" maxW="150px" isTruncated color="blue.600" fontWeight="bold">{log.new_value}</Td>
+                                                        <Td fontSize="10px">{new Date(log.timestamp).toLocaleString()}</Td>
+                                                    </Tr>
+                                                )) : (
+                                                    <Tr><Td colSpan={5} textAlign="center" py={10}>No changes logged yet.</Td></Tr>
+                                                )}
+                                            </Tbody>
+                                        </Table>
+                                    </TableContainer>
+                                </VStack>
+                            </TabPanel>
+                        </TabPanels>
+                    </Tabs>
+                </Box>
             </Flex>
         </Box>
     );

@@ -49,8 +49,10 @@ import {
     FaCalendarAlt,
     FaMapMarkedAlt,
     FaMapPin,
-    FaRoute
+    FaRoute,
+    FaFilePdf
 } from "react-icons/fa";
+import { exportLocaleToPDF } from "../utils/exportUtils";
 
 // --- CONFIG ---
 const CENTRAL_OFFICE = { lat: 14.6508, lng: 121.0505 };
@@ -58,7 +60,7 @@ const START_ADDRESS = "Iglesia+Ni+Cristo+-+Lokal+ng+Templo+Central,+1+Central+Av
 const envApiUrl = process.env.REACT_APP_API_URL || "";
 const envScraperHost = process.env.REACT_APP_SCRAPER_HOST || "";
 const API_BASE = (envApiUrl === "/" ? "" : (envApiUrl || "http://localhost:3001")) + "/api";
-const SCRAPER_BASE = (envScraperHost === "/" ? "" : (envScraperHost || "http://localhost:5001")) + "/api";
+const SCRAPER_BASE = (envScraperHost === "/" ? "" : (envScraperHost || "http://localhost:3001")) + "/api";
 
 const LocalCongregations = () => {
     const navigate = useNavigate();
@@ -71,6 +73,7 @@ const LocalCongregations = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [loading, setLoading] = useState(false);
     const [selectedLocale, setSelectedLocale] = useState(null);
+    const [currentDistrictName, setCurrentDistrictName] = useState("");
     const [isScraping, setIsScraping] = useState(false);
 
     // Timezone States
@@ -209,39 +212,60 @@ const LocalCongregations = () => {
     }, [searchTerm, allCongregations]);
 
     const handleSelectLocale = async (locale) => {
-        // Step 1: Open drawer immediately using DB data as placeholder
-        setSelectedLocale({
+        // Step 1: Map all DB fields to the shape the drawer expects
+        const fromDb = {
             ...locale,
             imageUrl: locale.image_url || null,
-        });
-        setLocaleTimezone(null); // Reset on each new selection
-        onOpen();
-        setIsScraping(true);
-        // Pre-fetch timezone from DB coordinates immediately (fastest path)
-        fetchTimezone(locale.latitude, locale.longitude);
+            // Pre-computed proximity from DB (stored during sync)
+            cachedAirDist: locale.air_distance || null,
+            cachedRoadDist: locale.road_distance || null,
+            cachedTravelTime: locale.travel_time || null,
+            // Pre-computed timezone (stored during sync)
+            cachedTimezoneDiff: locale.timezone_diff || null,
+        };
 
+        setSelectedLocale(fromDb);
+        setCurrentDistrictName(locale.District?.name || "Unknown");
+        onOpen();
+
+        // Step 2: If timezone is stored in DB, parse the IANA zone right away
+        if (locale.timezone_diff) {
+            // Format stored: "Asia/Manila · Same as PH (UTC+8)" — extract the IANA part
+            const iana = locale.timezone_diff.split(" · ")[0];
+            if (iana) setLocaleTimezone(iana);
+        } else if (locale.latitude && locale.longitude) {
+            // DB didn't have it — fetch it live
+            fetchTimezone(locale.latitude, locale.longitude);
+        }
+
+        // Step 3: Only scrape live if the important drawer fields are missing from DB
+        const needsScrape = !locale.schedule || !locale.address || (!locale.latitude && !locale.longitude);
+        if (!needsScrape) {
+            // All data is in the DB — drawer is fully loaded, no scraping needed
+            setIsScraping(false);
+            return;
+        }
+
+        // Step 4: Fallback live scrape for incomplete records
+        setIsScraping(true);
         try {
             const cleanName = (locale.slug || locale.name)
                 .toLowerCase()
-                .replace(/\s+/g, '-')
-                .replace(/[.,\']/g, '');
+                .replace(/\s+/g, "-")
+                .replace(/[.,']/g, "");
             const { data: scraped } = await axios.get(`${SCRAPER_BASE}/scrape/${cleanName}`);
 
             if (scraped && scraped.success !== false) {
-                // Step 2: Image priority: scraper lh5 > scraper generic > DB fallback
                 let bestImageUrl = locale.image_url || null;
                 const scraperImg = scraped.imageUrl || scraped.image_url;
                 if (scraperImg) {
-                    if (/lh[35]\.googleusercontent\.com/.test(scraperImg)) {
-                        // Stable Google URL — normalize to =s800 for best quality
-                        bestImageUrl = `${scraperImg.split('=')[0]}=s800`;
-                    } else {
-                        bestImageUrl = scraperImg;
-                    }
+                    bestImageUrl = /lh[35]\.googleusercontent\.com/.test(scraperImg)
+                        ? `${scraperImg.split("=")[0]}=s800`
+                        : scraperImg;
                 }
 
                 const fresh = {
-                    ...locale,
+                    ...fromDb,
                     ...scraped,
                     imageUrl: bestImageUrl,
                     latitude: scraped.latitude || locale.latitude,
@@ -249,16 +273,14 @@ const LocalCongregations = () => {
                 };
 
                 setSelectedLocale(fresh);
-                // Cache result so next click is instant
                 setAllCongregations(prev => prev.map(c => c.id === locale.id ? fresh : c));
-                // Fetch timezone using the best-available coordinates
-                fetchTimezone(fresh.latitude, fresh.longitude);
+                if (!locale.timezone_diff) fetchTimezone(fresh.latitude, fresh.longitude);
             }
         } catch (err) {
-            console.warn("Live scrape failed, using DB fallback", err);
+            console.warn("Live scrape fallback failed:", err);
             toast({
                 title: "Using Cached Data",
-                description: "Live scrape failed. Showing database info.",
+                description: "Could not fetch live data. Showing database info.",
                 status: "warning",
                 duration: 3000,
             });
@@ -374,14 +396,65 @@ const LocalCongregations = () => {
             <Drawer isOpen={isOpen} onClose={onClose} size="lg" placement="right">
                 <DrawerOverlay bg="blackAlpha.800" backdropFilter="blur(20px)" />
                 <DrawerContent bg={drawerBg} borderLeft="2px solid" borderColor="blue.500">
-                    <DrawerHeader bg="blue.600" color="white" py={6}>
-                        <HStack justify="space-between">
-                            <VStack align="start" spacing={0}>
-                                <Text fontSize="xl" fontWeight="black">{selectedLocale?.name || "LOCALE PROFILE"}</Text>
-                                <Text fontSize="2xs" fontWeight="black" opacity={0.8} letterSpacing="widest">PREMIUM DIRECTORY SERVICES</Text>
-                            </VStack>
-                            <DrawerCloseButton position="static" />
-                        </HStack>
+                    <DrawerHeader
+                        p={0}
+                        h={selectedLocale?.imageUrl ? "300px" : "100px"}
+                        position="relative"
+                        overflow="hidden"
+                    >
+                        {selectedLocale?.imageUrl ? (
+                            <Box h="100%" w="100%" position="relative">
+                                <Image
+                                    src={selectedLocale.imageUrl}
+                                    w="100%"
+                                    h="100%"
+                                    objectFit="cover"
+                                    as={motion.img}
+                                    initial={{ scale: 1.2 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ duration: 1.5 }}
+                                />
+                                <Box
+                                    position="absolute"
+                                    top={0}
+                                    left={0}
+                                    right={0}
+                                    bottom={0}
+                                    bgGradient="linear(to-t, blackAlpha.900, transparent)"
+                                />
+                                <VStack
+                                    position="absolute"
+                                    bottom={6}
+                                    left={6}
+                                    align="start"
+                                    spacing={0}
+                                    color="white"
+                                >
+                                    <Badge colorScheme="blue" mb={2}>ACTIVE LOCALE</Badge>
+                                    <Text fontSize="3xl" fontWeight="black" textShadow="0 2px 10px rgba(0,0,0,0.5)">
+                                        {selectedLocale.name}
+                                    </Text>
+                                    <Text fontSize="xs" fontWeight="bold" opacity={0.8} letterSpacing="widest">
+                                        DISTRICT OF {currentDistrictName?.toUpperCase()}
+                                    </Text>
+                                </VStack>
+                            </Box>
+                        ) : (
+                            <Box bg="blue.600" h="100%" w="100%" display="flex" alignItems="center" px={6}>
+                                <VStack align="start" spacing={0} color="white">
+                                    <Text fontSize="2xl" fontWeight="black">{selectedLocale?.name || "LOCALE PROFILE"}</Text>
+                                    <Text fontSize="2xs" fontWeight="black" opacity={0.8} letterSpacing="widest">PREMIUM DIRECTORY SERVICES</Text>
+                                </VStack>
+                            </Box>
+                        )}
+                        <DrawerCloseButton
+                            color="white"
+                            bg="blackAlpha.500"
+                            _hover={{ bg: "blackAlpha.700" }}
+                            borderRadius="full"
+                            top={4}
+                            right={4}
+                        />
                     </DrawerHeader>
 
                     <DrawerBody p={0} overflowY="auto" sx={{ '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bg: 'blue.500' } }}>
@@ -414,38 +487,13 @@ const LocalCongregations = () => {
                         ) : selectedLocale ? (
                             <VStack align="stretch" spacing={0}>
                                 <VStack p={6} spacing={8} align="stretch">
-                                    {/* Locale Image Section (Moved here) */}
-                                    {selectedLocale.imageUrl && (
-                                        <Box
-                                            borderRadius="2xl"
-                                            overflow="hidden"
-                                            shadow="2xl"
-                                            border="4px solid"
-                                            borderColor={imageBorderColor}
-                                            mb={4} // Margin bottom para may space sa button
-                                            as={motion.div}
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                        >
-                                            <Image
-                                                src={selectedLocale.imageUrl || 'https://via.placeholder.com/600x400?text=No+Image+Available'}
-                                                w="100%"
-                                                h="250px"
-                                                objectFit="cover"
-                                                fallback={<Box h="250px" bg="gray.200" display="flex" alignItems="center" justifyContent="center"><Spinner /></Box>}
-                                                transition="transform 0.5s ease"
-                                                _hover={{ transform: 'scale(1.03)' }}
-                                            />
-                                        </Box>
-                                    )}
-
                                     {/* Action Buttons */}
                                     <HStack spacing={4}>
                                         <Button
                                             as={Link}
                                             href={`https://www.google.com/maps/dir/${START_ADDRESS}/${selectedLocale.latitude},${selectedLocale.longitude}`}
                                             isExternal
-                                            w="full"
+                                            flex={1}
                                             height="60px"
                                             borderRadius="2xl"
                                             colorScheme="blue"
@@ -453,6 +501,30 @@ const LocalCongregations = () => {
                                             shadow="xl"
                                         >
                                             OPEN MAPS
+                                        </Button>
+                                        <Button
+                                            onClick={() => {
+                                                const air = getAirDist(selectedLocale.latitude, selectedLocale.longitude);
+                                                const road = getRoadDist(air);
+                                                const traffic = getEstTraffic(road);
+                                                const tz = localeTimezone ? getTimezoneInfo(localeTimezone, currentTime)?.diffLabel : null;
+
+                                                exportLocaleToPDF({
+                                                    ...selectedLocale,
+                                                    air_distance: air ? `${air} KM` : null,
+                                                    road_distance: road ? `${road} KM` : null,
+                                                    travel_time: traffic ? `${traffic} MIN` : null,
+                                                    timezone_diff: tz
+                                                }, currentDistrictName);
+                                            }}
+                                            flex={1}
+                                            height="60px"
+                                            borderRadius="2xl"
+                                            colorScheme="red"
+                                            leftIcon={<FaFilePdf />}
+                                            shadow="xl"
+                                        >
+                                            EXPORT PDF
                                         </Button>
                                     </HStack>
 
@@ -531,7 +603,11 @@ const LocalCongregations = () => {
                                                     className="schedule-box"
                                                     dangerouslySetInnerHTML={{
                                                         __html: (selectedLocale.schedule || "Fetching schedule...")
-                                                            .replace(/Worship Service Schedule\s*(<br>)?\s*Be sure to confirm worship service schedules before attending\.\s*Worship service times may be temporarily or recently changed\./gi, "")
+                                                            .replace(/Worship Service Schedule/gi, "")
+                                                            .replace(/Be sure to confirm.*?before attending\./gi, "")
+                                                            .replace(/Worship service times may be temporarily or recently changed\./gi, "")
+                                                            .replace(/Wednesday\s*$/gi, "")
+                                                            .trim()
                                                     }}
                                                     sx={{
                                                         '.daygroup': { mb: 4, pb: 2, borderBottom: '1px solid', borderColor: 'gray.100' },
@@ -543,7 +619,15 @@ const LocalCongregations = () => {
                                             {selectedLocale.contact && (
                                                 <Box>
                                                     <Text fontSize="xs" fontWeight="black" color="gray.400" mb={1}>CONTACT CHANNELS</Text>
-                                                    <Box fontSize="sm" fontWeight="bold" dangerouslySetInnerHTML={{ __html: selectedLocale.contact }} />
+                                                    <Box
+                                                        fontSize="sm"
+                                                        fontWeight="bold"
+                                                        dangerouslySetInnerHTML={{
+                                                            __html: selectedLocale.contact
+                                                                .replace(/<br\s*\/?>/gi, " • ") // Replace br with bullet for space efficiency
+                                                                .replace(/<\/?p>/gi, "")
+                                                        }}
+                                                    />
                                                 </Box>
                                             )}
                                         </VStack>

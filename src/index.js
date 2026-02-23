@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { ChakraProvider } from "@chakra-ui/react";
 import App from "./App";
 import theme from "./theme";
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -10,3 +11,6 @@ root.render(
     <App />
   </ChakraProvider>
 );
+
+// Register the service worker to make the app a PWA
+serviceWorkerRegistration.register();

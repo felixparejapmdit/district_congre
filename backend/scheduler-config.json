@@ -1,0 +1,4 @@
+{
+  "enabled": false,
+  "cronExpression": "0 0 * * *"
+}

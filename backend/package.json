@@ -20,6 +20,7 @@
     "express": "^4.22.1",
     "fs": "^0.0.1-security",
     "mysql2": "^3.16.2",
+    "node-cron": "^4.2.1",
     "puppeteer": "^24.1.1",
     "sequelize": "^6.37.7"
   }

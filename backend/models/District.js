@@ -29,6 +29,10 @@ const District = sequelize.define(
       type: DataTypes.FLOAT,
       allowNull: true,
     },
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
   },
   {
     tableName: "districts",
