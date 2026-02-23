@@ -1,14 +1,11 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   ChakraProvider,
   Box,
   Flex,
   useBreakpointValue,
-  Drawer,
-  DrawerContent,
-  DrawerOverlay,
+  IconButton,
   useDisclosure,
-  IconButton
 } from "@chakra-ui/react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { FaBars } from "react-icons/fa";
@@ -22,58 +19,43 @@ import Districts from "./pages/Districts";
 import LocalCongregations from "./pages/LocalCongregations";
 
 const App = () => {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const isMobile = useBreakpointValue({ base: true, lg: false });
   const { isOpen, onOpen, onClose } = useDisclosure();
-
 
   return (
     <ChakraProvider theme={theme}>
       <Router>
-        <Flex width="100vw" height="100vh" overflow="hidden" position="relative">
+        <Flex direction="column" width="100vw" height="100vh" overflow="hidden">
 
-          {/* MOBILE NAVIGATION */}
+          {/* MOBILE: Hamburger Button + Drawer */}
           {isMobile ? (
             <>
               <IconButton
                 icon={<FaBars />}
                 position="fixed"
-                top={4}
+                top={3}
                 left={4}
-                zIndex="20"
+                zIndex="200"
                 onClick={onOpen}
                 variant="solid"
                 colorScheme="blue"
                 borderRadius="full"
+                size="sm"
                 shadow="lg"
                 aria-label="Open Menu"
               />
-              <Drawer isOpen={isOpen} placement="left" onClose={onClose} size="xs">
-                <DrawerOverlay backdropFilter="blur(4px)" />
-                <DrawerContent bg="transparent" border="none" shadow="none">
-                  <Sidebar
-                    isCollapsed={false}
-                    onToggle={onClose}
-                    isMobile={true}
-                  />
-                </DrawerContent>
-              </Drawer>
+              <Sidebar isMobile={true} isOpen={isOpen} onClose={onClose} />
             </>
           ) : (
-            /* DESKTOP NAVIGATION */
-            <Sidebar
-              isCollapsed={isSidebarCollapsed}
-              onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            />
+            /* DESKTOP: Top Menu Bar */
+            <Sidebar isMobile={false} />
           )}
 
           {/* Main Content Area */}
           <Box
             flex="1"
-            h="100vh"
             overflow="hidden"
-            ml={0}
-            transition="margin-left 0.3s"
+            pt={isMobile ? "60px" : 0}
           >
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -84,6 +66,7 @@ const App = () => {
               <Route path="/local-congregations" element={<LocalCongregations />} />
             </Routes>
           </Box>
+
         </Flex>
       </Router>
     </ChakraProvider>

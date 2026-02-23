@@ -1,16 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
 import {
     Box,
-    VStack,
     HStack,
     Icon,
     Text,
     Tooltip,
-    Divider,
     IconButton,
     useColorMode,
     useColorModeValue,
     Switch,
+    Drawer,
+    DrawerOverlay,
+    DrawerContent,
+    DrawerBody,
+    VStack,
+    Flex,
 } from "@chakra-ui/react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -18,176 +22,193 @@ import {
     FaAddressBook,
     FaMapMarkerAlt,
     FaCog,
-    FaChevronLeft,
-    FaChevronRight,
     FaSun,
     FaMoon,
+    FaBars,
 } from "react-icons/fa";
+import { motion } from "framer-motion";
 
-const SidebarItem = ({ icon, label, path, active, isCollapsed, onClick, activeBg, hoverBg, activeColor, inactiveColor, hoverColor }) => {
-    return (
-        <Tooltip label={isCollapsed ? label : ""} placement="right" hasArrow>
-            <HStack
-                w="100%"
-                p={3}
-                cursor="pointer"
-                borderRadius="xl"
-                bg={active ? activeBg : "transparent"}
-                color={active ? activeColor : inactiveColor}
-                _hover={{
-                    bg: active ? activeBg : hoverBg,
-                    color: active ? activeColor : hoverColor
-                }}
-                transition="all 0.2s"
-                onClick={() => onClick(path)}
-                spacing={4}
-                justify={isCollapsed ? "center" : "flex-start"}
-            >
-                <Icon as={icon} fontSize="lg" />
-                {!isCollapsed && (
-                    <Text fontWeight="bold" fontSize="sm" letterSpacing="tight">
-                        {label}
-                    </Text>
-                )}
-            </HStack>
-        </Tooltip>
-    );
-};
+const navItems = [
+    { icon: FaHome, label: "Dashboard", path: "/" },
+    { icon: FaAddressBook, label: "Districts Manager", path: "/directory-manager" },
+    { icon: FaMapMarkerAlt, label: "Find Congregation", path: "/local-congregations" },
+    { icon: FaCog, label: "Settings", path: "/settings" },
+];
 
-const Sidebar = ({ isCollapsed, onToggle, isMobile }) => {
+const NavItem = ({ icon, label, path, active, onClick, activeBg, hoverBg, activeColor, inactiveColor, hoverColor }) => (
+    <Tooltip label={label} placement="bottom" hasArrow openDelay={400}>
+        <HStack
+            as={motion.div}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            px={4}
+            py={2}
+            cursor="pointer"
+            borderRadius="xl"
+            bg={active ? activeBg : "transparent"}
+            color={active ? activeColor : inactiveColor}
+            _hover={{ bg: active ? activeBg : hoverBg, color: active ? activeColor : hoverColor }}
+            transition="all 0.2s"
+            onClick={() => onClick(path)}
+            spacing={2}
+            position="relative"
+        >
+            <Icon as={icon} fontSize="sm" />
+            <Text fontWeight="bold" fontSize="sm" whiteSpace="nowrap" letterSpacing="tight">
+                {label}
+            </Text>
+            {active && (
+                <Box
+                    as={motion.div}
+                    layoutId="activeIndicator"
+                    position="absolute"
+                    bottom="-2px"
+                    left="50%"
+                    transform="translateX(-50%)"
+                    w="60%"
+                    h="2px"
+                    bg="blue.400"
+                    borderRadius="full"
+                />
+            )}
+        </HStack>
+    </Tooltip>
+);
+
+const MobileNavItem = ({ icon, label, path, active, onClick, activeBg, inactiveColor, activeColor }) => (
+    <HStack
+        w="100%"
+        px={4}
+        py={3}
+        cursor="pointer"
+        borderRadius="xl"
+        bg={active ? activeBg : "transparent"}
+        color={active ? activeColor : inactiveColor}
+        spacing={4}
+        onClick={() => onClick(path)}
+        _hover={{ bg: activeBg, color: activeColor }}
+        transition="all 0.2s"
+    >
+        <Icon as={icon} fontSize="lg" />
+        <Text fontWeight="bold" fontSize="md">{label}</Text>
+    </HStack>
+);
+
+const Sidebar = ({ isMobile, isOpen, onClose }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { colorMode, toggleColorMode } = useColorMode();
 
-    const bg = useColorModeValue("white", "rgba(10, 15, 26, 0.95)");
+    const bg = useColorModeValue("rgba(255,255,255,0.9)", "rgba(10,15,26,0.95)");
     const borderColor = useColorModeValue("gray.200", "whiteAlpha.100");
-    const logoColor = useColorModeValue("blue.600", "blue.400");
-    const themeBg = useColorModeValue("gray.50", "whiteAlpha.50");
-    const toggleHoverBg = useColorModeValue("blackAlpha.50", "whiteAlpha.200");
-
-    // Colors for SidebarItem
+    const logoColor = useColorModeValue("blue.600", "blue.300");
     const itemActiveBg = useColorModeValue("blue.500", "blue.600");
     const itemHoverBg = useColorModeValue("blackAlpha.50", "whiteAlpha.100");
     const itemInactiveColor = useColorModeValue("gray.600", "gray.400");
-    const itemHoverColor = useColorModeValue("black", "white");
-
-    const navItems = [
-        { icon: FaHome, label: "Dashboard", path: "/" },
-        { icon: FaAddressBook, label: "Districts Manager", path: "/directory-manager" },
-        { icon: FaMapMarkerAlt, label: "Find Congregation", path: "/local-congregations" },
-    ];
+    const itemHoverColor = useColorModeValue("gray.900", "white");
 
     const handleClick = (path) => {
         navigate(path);
-        if (isMobile) onToggle(); // Close mobile drawer on pick
+        if (isMobile && onClose) onClose();
     };
 
+    // --- MOBILE DRAWER ---
+    if (isMobile) {
+        return (
+            <Drawer isOpen={isOpen} placement="left" onClose={onClose} size="xs">
+                <DrawerOverlay backdropFilter="blur(6px)" />
+                <DrawerContent bg={bg} border="none" shadow="2xl" maxW="240px">
+                    <DrawerBody pt={8} px={4}>
+                        <VStack align="stretch" spacing={1}>
+                            {/* Logo */}
+                            <Box mb={6} px={2}>
+                                <Text fontWeight="black" color={logoColor} fontSize="2xl" letterSpacing="tighter">
+                                    INC
+                                </Text>
+                                <Text fontSize="8px" fontWeight="black" color="gray.500" letterSpacing="2px">
+                                    DIRECTORY
+                                </Text>
+                            </Box>
+
+                            {/* Nav Links */}
+                            {navItems.map((item) => (
+                                <MobileNavItem
+                                    key={item.path}
+                                    {...item}
+                                    active={location.pathname === item.path}
+                                    onClick={handleClick}
+                                    activeBg={itemActiveBg}
+                                    activeColor="white"
+                                    inactiveColor={itemInactiveColor}
+                                />
+                            ))}
+
+                            {/* Theme Toggle */}
+                            <HStack px={4} py={3} mt={4} borderRadius="xl" bg={itemHoverBg} justify="space-between">
+                                <HStack spacing={2} color={itemInactiveColor}>
+                                    <Icon as={colorMode === "light" ? FaSun : FaMoon} color="orange.400" />
+                                    <Text fontSize="sm" fontWeight="bold">
+                                        {colorMode === "light" ? "LIGHT" : "DARK"} MODE
+                                    </Text>
+                                </HStack>
+                                <Switch size="sm" isChecked={colorMode === "dark"} onChange={toggleColorMode} colorScheme="blue" />
+                            </HStack>
+                        </VStack>
+                    </DrawerBody>
+                </DrawerContent>
+            </Drawer>
+        );
+    }
+
+    // --- DESKTOP MENU BAR ---
     return (
         <Box
-            h="100vh"
-            w={isCollapsed ? "80px" : "260px"}
+            w="100%"
+            h="58px"
             bg={bg}
             backdropFilter="blur(20px)"
-            borderRight="1px solid"
+            borderBottom="1px solid"
             borderColor={borderColor}
-            transition="width 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-            display="flex"
-            flexDirection="column"
-            p={4}
-            position="relative"
-            zIndex="10"
+            position="sticky"
+            top="0"
+            zIndex="100"
+            shadow="sm"
+            flexShrink={0}
         >
-            {/* Logo Section */}
-            <VStack align={isCollapsed ? "center" : "start"} mb={10} spacing={1} px={2} pt={isMobile ? 12 : 0}>
-                <Text
-                    fontWeight="black"
-                    color={logoColor}
-                    fontSize={isCollapsed ? "xl" : "2xl"}
-                    letterSpacing="tighter"
-                >
-                    INC
-                </Text>
-                {!isCollapsed && (
-                    <Text fontSize="8px" fontWeight="black" color="gray.500" letterSpacing="2px">
+            <Flex h="100%" px={6} align="center" justify="space-between">
+                {/* Logo */}
+                <HStack spacing={2} mr={8}>
+                    <Text fontWeight="black" color={logoColor} fontSize="xl" letterSpacing="tighter">
+                        INC
+                    </Text>
+                    <Text fontSize="8px" fontWeight="black" color="gray.500" letterSpacing="2px" mt="2px">
                         DIRECTORY
                     </Text>
-                )}
-            </VStack>
-
-            {/* Navigation Items */}
-            <VStack spacing={2} align="stretch" flex="1">
-                {navItems.map((item) => (
-                    <SidebarItem
-                        key={item.path}
-                        {...item}
-                        active={location.pathname === item.path}
-                        isCollapsed={isCollapsed}
-                        onClick={handleClick}
-                        activeBg={itemActiveBg}
-                        hoverBg={itemHoverBg}
-                        activeColor="white"
-                        inactiveColor={itemInactiveColor}
-                        hoverColor={itemHoverColor}
-                    />
-                ))}
-            </VStack>
-
-            <Divider borderColor={borderColor} my={4} />
-
-            {/* Theme & Bottom Section */}
-            <VStack spacing={2} align="stretch">
-                <HStack
-                    px={3}
-                    py={2}
-                    justify={isCollapsed ? "center" : "space-between"}
-                    bg={themeBg}
-                    borderRadius="xl"
-                    mb={2}
-                >
-                    {!isCollapsed && (
-                        <HStack spacing={2}>
-                            <Icon as={colorMode === "light" ? FaSun : FaMoon} color="orange.400" />
-                            <Text fontSize="xs" fontWeight="bold">
-                                {colorMode === "light" ? "LIGHT" : "DARK"} MODE
-                            </Text>
-                        </HStack>
-                    )}
-                    <Switch
-                        size="sm"
-                        isChecked={colorMode === "dark"}
-                        onChange={toggleColorMode}
-                        colorScheme="blue"
-                    />
                 </HStack>
 
-                <SidebarItem
-                    icon={FaCog}
-                    label="Settings"
-                    path="/settings"
-                    active={location.pathname === "/settings"}
-                    isCollapsed={isCollapsed}
-                    onClick={handleClick}
-                    activeBg={itemActiveBg}
-                    hoverBg={itemHoverBg}
-                    activeColor="white"
-                    inactiveColor={itemInactiveColor}
-                    hoverColor={itemHoverColor}
-                />
+                {/* Nav Links */}
+                <HStack spacing={1} flex="1">
+                    {navItems.map((item) => (
+                        <NavItem
+                            key={item.path}
+                            {...item}
+                            active={location.pathname === item.path}
+                            onClick={handleClick}
+                            activeBg={itemActiveBg}
+                            hoverBg={itemHoverBg}
+                            activeColor="white"
+                            inactiveColor={itemInactiveColor}
+                            hoverColor={itemHoverColor}
+                        />
+                    ))}
+                </HStack>
 
-                {!isMobile && (
-                    <IconButton
-                        icon={isCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-                        onClick={onToggle}
-                        variant="ghost"
-                        colorScheme="whiteAlpha"
-                        size="sm"
-                        w="100%"
-                        mt={4}
-                        _hover={{ bg: toggleHoverBg }}
-                        aria-label="Toggle Sidebar"
-                    />
-                )}
-            </VStack>
+                {/* Theme Toggle */}
+                <HStack spacing={3} ml={4}>
+                    <Icon as={colorMode === "light" ? FaSun : FaMoon} color="orange.400" fontSize="sm" />
+                    <Switch size="sm" isChecked={colorMode === "dark"} onChange={toggleColorMode} colorScheme="blue" />
+                </HStack>
+            </Flex>
         </Box>
     );
 };
