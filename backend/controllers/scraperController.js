@@ -15,6 +15,21 @@ const scrapeCongregationSchedule = async (req, res) => {
   const url = `https://directory.iglesianicristo.net/locales/${congregation}`;
   console.log(`🔍 Scraping schedule from: ${url}`);
 
+  const extractCoords = ($, html) => {
+    // 1. Try Apple Maps link (most common)
+    const navLink = $('a[href*="maps.apple.com"]').attr('href') || "";
+    if (navLink) {
+      const match = navLink.match(/q=([-.\d]+),\s*([-.\d]+)/) || navLink.match(/ll=([-.\d]+),\s*([-.\d]+)/);
+      if (match) return { lat: parseFloat(match[1]), lng: parseFloat(match[2]), navLink };
+    }
+
+    // 2. Try searching raw HTML for JSON-LD or structured data
+    const jsonMatch = html.match(/"latitude":\s*([-.\d]+),\s*"longitude":\s*([-.\d]+)/);
+    if (jsonMatch) return { lat: parseFloat(jsonMatch[1]), lng: parseFloat(jsonMatch[2]), navLink: "" };
+
+    return { lat: null, lng: null, navLink: "" };
+  };
+
   try {
     const { data } = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
@@ -25,20 +40,34 @@ const scrapeCongregationSchedule = async (req, res) => {
 
     if (!containers.length) {
       return res.json({
+        success: false,
         congregation,
         schedule: "<p>No worship schedule found.</p>",
       });
     }
 
     const lastContainer = containers.last().html();
+    const { lat: latitude, lng: longitude, navLink: navigateUrl } = extractCoords($, data);
+
     res.json({
+      success: true,
       congregation,
       schedule: `<div class="schedule-container">${lastContainer}</div>`,
       address: $("address").first().text().trim(),
       contact: $(".inc-contact-info").html() || "",
-      navigateUrl: $('a[href*="maps.apple.com"]').attr('href') || ""
+      navigateUrl,
+      latitude,
+      longitude
     });
   } catch (error) {
+    if (error.response?.status === 404) {
+      console.warn(`⚠️ Congregation not found: ${congregation}`);
+      return res.json({
+        success: false,
+        congregation,
+        schedule: "<p>Congregation page not found in directory.</p>"
+      });
+    }
     console.error("❌ Scraping failed:", error.message);
     res.status(500).json({ error: "Failed to scrape data." });
   }
@@ -46,12 +75,10 @@ const scrapeCongregationSchedule = async (req, res) => {
 
 /**
  * 🟢 Proxy Districts List
- * Fetches the raw HTML of the districts list from the directory
  */
 const getDistricts = async (req, res) => {
   try {
     const url = "https://directory.iglesianicristo.net/districts";
-    console.log(`🔍 Proxying districts from: ${url}`);
     const response = await axios.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
       timeout: 15000
@@ -65,7 +92,6 @@ const getDistricts = async (req, res) => {
 
 /**
  * 🟢 Proxy Locales List
- * Fetches the raw HTML of locales for a specific district path
  */
 const getLocales = async (req, res) => {
   const { path } = req.query;
@@ -73,7 +99,6 @@ const getLocales = async (req, res) => {
 
   try {
     const fullUrl = path.startsWith('http') ? path : `https://directory.iglesianicristo.net${path}`;
-    console.log(`🔍 Proxying locales from: ${fullUrl}`);
     const response = await axios.get(fullUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
       timeout: 15000

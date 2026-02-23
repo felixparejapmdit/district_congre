@@ -168,8 +168,8 @@ const LocalCongregations = () => {
         try {
             const { data } = await axios.get(`${API_BASE}/all-congregations`);
             setAllCongregations(data);
-        } catch (err) {
-            console.error("Init failed:", err);
+        } catch (error) {
+            console.error("Init failed:", error);
             toast({ title: "Database Error", status: "error" });
         } finally {
             setLoading(false);
@@ -344,9 +344,9 @@ const LocalCongregations = () => {
                         <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
                             <AnimatePresence>
                                 {filtered.map(c => {
-                                    const airDist = getAirDist(c.latitude, c.longitude);
-                                    const roadDist = getRoadDist(airDist);
-                                    const traffic = getEstTraffic(roadDist);
+                                    const airDistBase = c.air_distance || (getAirDist(c.latitude, c.longitude) ? `${getAirDist(c.latitude, c.longitude)} KM` : null);
+                                    const roadDistBase = c.road_distance || (getRoadDist(parseFloat(airDistBase)) ? `${getRoadDist(parseFloat(airDistBase))} KM` : null);
+                                    const trafficBase = c.travel_time || (getEstTraffic(parseFloat(roadDistBase)) ? `${getEstTraffic(parseFloat(roadDistBase))} MINS` : null);
 
                                     return (
                                         <Box
@@ -354,7 +354,7 @@ const LocalCongregations = () => {
                                             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
                                             bg={cardBg} p={6} borderRadius="3xl" shadow="xl" border="1px solid" borderColor={borderColor}
                                             cursor="pointer" onClick={() => handleSelectLocale(c)}
-                                            whileHover={{ y: -8, shadow: "2xl", borderColor: "blue.400" }} transition="all 0.4s ease"
+                                            whileHover={{ y: -8, shadow: "2xl", borderColor: "#4299E1" }} transition="all 0.4s ease"
                                         >
                                             <VStack align="stretch" spacing={4}>
                                                 <Flex justify="space-between" align="start">
@@ -370,15 +370,15 @@ const LocalCongregations = () => {
                                                 <SimpleGrid columns={2} spacing={4}>
                                                     <VStack align="start" spacing={0}>
                                                         <HStack color="green.500" spacing={1} fontSize="10px" fontWeight="black"><FaCar /><Text>AIR DISTANCE</Text></HStack>
-                                                        <Text fontSize="md" fontWeight="black" color={titleColor}>{airDist ? `${airDist} KM` : "---"}</Text>
+                                                        <Text fontSize="md" fontWeight="black" color={titleColor}>{airDistBase || "---"}</Text>
                                                     </VStack>
                                                     <VStack align="start" spacing={0}>
                                                         <HStack color="blue.500" spacing={1} fontSize="10px" fontWeight="black"><FaRoad /><Text>ROAD DISTANCE</Text></HStack>
-                                                        <Text fontSize="md" fontWeight="black" color={titleColor}>{roadDist ? `${roadDist} KM` : "---"}</Text>
+                                                        <Text fontSize="md" fontWeight="black" color={titleColor}>{roadDistBase || "---"}</Text>
                                                     </VStack>
                                                     <VStack align="start" spacing={0}>
                                                         <HStack color="orange.500" spacing={1} fontSize="10px" fontWeight="black"><FaClock /><Text>EST. TRAFFIC</Text></HStack>
-                                                        <Text fontSize="md" fontWeight="black" color={titleColor}>{traffic ? `${traffic} MINS` : "---"}</Text>
+                                                        <Text fontSize="md" fontWeight="black" color={titleColor}>{trafficBase || "---"}</Text>
                                                     </VStack>
                                                     <Flex align="center" justify="end"><Button rightIcon={<FaExternalLinkAlt />} colorScheme="blue" variant="link" size="sm" fontWeight="black">DETAILS</Button></Flex>
                                                 </SimpleGrid>
@@ -534,15 +534,21 @@ const LocalCongregations = () => {
                                         <SimpleGrid columns={3} spacing={2}>
                                             <VStack p={3} bg="blackAlpha.50" borderRadius="2xl" align="center">
                                                 <Text fontSize="8px" fontWeight="black" color="gray.500">AIR DISTANCE</Text>
-                                                <Text fontWeight="1000" fontSize="sm">{getAirDist(selectedLocale.latitude, selectedLocale.longitude) || "---"} KM</Text>
+                                                <Text fontWeight="1000" fontSize="sm">
+                                                    {selectedLocale.air_distance || (getAirDist(selectedLocale.latitude, selectedLocale.longitude) ? `${getAirDist(selectedLocale.latitude, selectedLocale.longitude)} KM` : "---")}
+                                                </Text>
                                             </VStack>
                                             <VStack p={3} bg="blackAlpha.50" borderRadius="2xl" align="center">
                                                 <Text fontSize="8px" fontWeight="black" color="gray.500">ROAD DISTANCE</Text>
-                                                <Text fontWeight="1000" fontSize="sm">{getRoadDist(getAirDist(selectedLocale.latitude, selectedLocale.longitude)) || "---"} KM</Text>
+                                                <Text fontWeight="1000" fontSize="sm">
+                                                    {selectedLocale.road_distance || (getRoadDist(getAirDist(selectedLocale.latitude, selectedLocale.longitude)) ? `${getRoadDist(getAirDist(selectedLocale.latitude, selectedLocale.longitude))} KM` : "---")}
+                                                </Text>
                                             </VStack>
                                             <VStack p={3} bg="blackAlpha.50" borderRadius="2xl" align="center">
                                                 <Text fontSize="8px" fontWeight="black" color="gray.500">AVG TRAVEL</Text>
-                                                <Text fontWeight="1000" fontSize="sm">{getEstTraffic(getRoadDist(getAirDist(selectedLocale.latitude, selectedLocale.longitude))) || "---"} MIN</Text>
+                                                <Text fontWeight="1000" fontSize="sm">
+                                                    {selectedLocale.travel_time || (getEstTraffic(getRoadDist(getAirDist(selectedLocale.latitude, selectedLocale.longitude))) ? `${getEstTraffic(getRoadDist(getAirDist(selectedLocale.latitude, selectedLocale.longitude)))} MIN` : "---")}
+                                                </Text>
                                             </VStack>
                                         </SimpleGrid>
                                     </Box>
