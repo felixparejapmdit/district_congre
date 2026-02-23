@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useColorMode, useColorModeValue } from "@chakra-ui/react";
 import {
     Box,
     Input,
@@ -50,6 +51,42 @@ const DB_BASE = (envApiUrl === "/" ? "" : (envApiUrl || "http://localhost:3001")
 
 const DirectoryManager = () => {
     const toast = useToast();
+    const { colorMode } = useColorMode();
+
+    // --- Theme Tokens ---
+    const pageBg = useColorModeValue(
+        "url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')",
+        "url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')"
+    );
+    const overlayBg = useColorModeValue("rgba(240,245,255,0.55)", "rgba(5,8,20,0.80)");
+    const panelBg = useColorModeValue("rgba(255,255,255,0.92)", "rgba(15,20,35,0.90)");
+    const panelBorder = useColorModeValue("rgba(255,255,255,0.5)", "rgba(255,255,255,0.06)");
+    const localesPanelBg = useColorModeValue("rgba(255,255,255,0.75)", "rgba(18,24,42,0.85)");
+    const headingColor = useColorModeValue("blue.800", "blue.200");
+    const subTextColor = useColorModeValue("gray.500", "gray.400");
+    const bodyTextColor = useColorModeValue("gray.800", "gray.100");
+    const inputBg = useColorModeValue("white", "rgba(255,255,255,0.06)");
+    const inputBorderColor = useColorModeValue("gray.200", "whiteAlpha.200");
+    const dividerColor = useColorModeValue("rgba(0,0,0,0.06)", "rgba(255,255,255,0.06)");
+    const districtItemBg = useColorModeValue("white", "rgba(255,255,255,0.05)");
+    const districtItemColor = useColorModeValue("gray.700", "gray.200");
+    const localeCardBg = useColorModeValue("rgba(255,255,255,0.6)", "rgba(255,255,255,0.05)");
+    const localeCardHoverBg = useColorModeValue("blue.50", "rgba(66,153,225,0.15)");
+    const localeCardBorderColor = useColorModeValue("gray.100", "whiteAlpha.100");
+    const localeCardHoverBorder = useColorModeValue("blue.200", "blue.500");
+    const localeCardNameColor = useColorModeValue("gray.800", "white");
+    const modalBg = useColorModeValue("gray.50", "gray.900");
+    const modalSectionBg = useColorModeValue("white", "rgba(255,255,255,0.05)");
+    const modalSectionBorder = useColorModeValue("gray.100", "whiteAlpha.100");
+    const modalLabelColor = useColorModeValue("gray.400", "gray.500");
+    const modalTextColor = useColorModeValue("gray.800", "gray.100");
+    const contactSectionBg = useColorModeValue("indigo.50", "rgba(99,102,241,0.08)");
+    const contactSectionBorder = useColorModeValue("indigo.100", "rgba(99,102,241,0.2)");
+    const emptyStateColor = useColorModeValue("gray.400", "gray.600");
+    const scrollbarThumb = useColorModeValue("rgba(0,0,0,0.1)", "rgba(255,255,255,0.1)");
+    const exportModalBg = useColorModeValue("white", "gray.800");
+    const exportModalBorder = useColorModeValue("blue.100", "blue.900");
+    const exportTitleColor = useColorModeValue("blue.900", "blue.200");
     const [districts, setDistricts] = useState([]);
     const [filteredDistricts, setFilteredDistricts] = useState([]);
     const [searchDistrict, setSearchDistrict] = useState("");
@@ -252,9 +289,9 @@ const DirectoryManager = () => {
         <Box
             position="relative"
             w="100%"
-            h="100vh"
+            h="calc(100vh - 58px)"
             overflow="hidden"
-            backgroundImage="url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')"
+            backgroundImage={pageBg}
             backgroundSize="cover"
             backgroundPosition="center"
         >
@@ -265,8 +302,8 @@ const DirectoryManager = () => {
                 left="0"
                 w="100%"
                 h="100%"
-                bgGradient="radial(circle at center, transparent, rgba(0,0,0,0.6))"
-                backdropFilter="brightness(0.6)"
+                bg={overlayBg}
+                backdropFilter={colorMode === 'dark' ? "brightness(0.4)" : "brightness(1.05) blur(1px)"}
                 zIndex="0"
             />
 
@@ -281,19 +318,20 @@ const DirectoryManager = () => {
                 {/* DISTRICTS SIDEBAR */}
                 <Box
                     w={isMobile ? "100%" : "380px"}
-                    bg="rgba(255, 255, 255, 0.9)"
-                    backdropFilter="blur(15px)"
+                    bg={panelBg}
+                    backdropFilter="blur(20px)"
                     borderRadius="2xl"
                     p={6}
                     shadow="2xl"
                     display="flex"
                     flexDir="column"
-                    border="1px solid rgba(255, 255, 255, 0.4)"
+                    border="1px solid"
+                    borderColor={panelBorder}
                 >
                     <VStack align="stretch" spacing={4} flex="1" overflow="hidden">
                         <Flex justify="space-between" align="center">
                             <HStack spacing={3}>
-                                <Text fontSize="xl" fontWeight="black" color="blue.900" display="flex" align="center" gap={2}>
+                                <Text fontSize="xl" fontWeight="black" color={headingColor} display="flex" align="center" gap={2}>
                                     <FaGlobeAsia /> DISTRICTS
                                 </Text>
                             </HStack>
@@ -319,7 +357,7 @@ const DirectoryManager = () => {
                             </HStack>
                         </Flex>
 
-                        <Text fontSize="10px" color="gray.500" fontWeight="bold" noOfLines={1} opacity={0.7}>
+                        <Text fontSize="10px" color={subTextColor} fontWeight="bold" noOfLines={1} opacity={0.7}>
                             SELECTED: {selectedDistrictNames || "NONE"}
                         </Text>
 
@@ -328,23 +366,27 @@ const DirectoryManager = () => {
                                 placeholder="Search districts..."
                                 value={searchDistrict}
                                 onChange={(e) => setSearchDistrict(e.target.value)}
-                                bg="white"
+                                bg={inputBg}
+                                borderColor={inputBorderColor}
+                                color={bodyTextColor}
+                                _placeholder={{ color: subTextColor }}
                                 borderRadius="xl"
                                 pl={10}
                                 size="lg"
                                 shadow="sm"
+                                _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px var(--chakra-colors-blue-400)" }}
                             />
                             <Box position="absolute" left={4} top="50%" transform="translateY(-50%)" color="gray.400">
                                 <FaSearch />
                             </Box>
                         </Box>
 
-                        <Divider />
+                        <Divider borderColor={dividerColor} />
 
                         <Box flex="1" overflowY="auto" pr={2} sx={{
                             '&::-webkit-scrollbar': { width: '4px' },
                             '&::-webkit-scrollbar-track': { background: 'transparent' },
-                            '&::-webkit-scrollbar-thumb': { background: 'rgba(0,0,0,0.1)', borderRadius: 'full' },
+                            '&::-webkit-scrollbar-thumb': { background: scrollbarThumb, borderRadius: 'full' },
                         }}>
                             {loadingDistricts ? (
                                 <Flex justify="center" p={8}><Spinner color="blue.500" /></Flex>
@@ -356,8 +398,8 @@ const DirectoryManager = () => {
                                             as={motion.div}
                                             whileHover={{ scale: 1.01, x: 2 }}
                                             p={3}
-                                            bg={selectedDistrict?.path === d.path ? "blue.600" : "white"}
-                                            color={selectedDistrict?.path === d.path ? "white" : "gray.700"}
+                                            bg={selectedDistrict?.path === d.path ? "blue.600" : districtItemBg}
+                                            color={selectedDistrict?.path === d.path ? "white" : districtItemColor}
                                             borderRadius="xl"
                                             cursor="pointer"
                                             onClick={() => fetchLocales(d)}
@@ -397,14 +439,15 @@ const DirectoryManager = () => {
                 {/* LOCALES PANEL */}
                 <Box
                     flex="1"
-                    bg="rgba(255, 255, 255, 0.7)"
+                    bg={localesPanelBg}
                     backdropFilter="blur(20px)"
                     borderRadius="3xl"
                     p={8}
                     shadow="dark-lg"
                     display="flex"
                     flexDir="column"
-                    border="1px solid rgba(255, 255, 255, 0.6)"
+                    border="1px solid"
+                    borderColor={panelBorder}
                 >
                     <VStack align="stretch" spacing={6} flex="1" overflow="hidden">
                         <Flex justify="space-between" align="center">
@@ -412,8 +455,8 @@ const DirectoryManager = () => {
                                 <Text fontSize="xs" fontWeight="black" color="blue.500" letterSpacing="widest" mb={1}>
                                     AVAILABLE CONGREGATIONS
                                 </Text>
-                                <Text fontSize="2xl" fontWeight="black" color="gray.800" display="flex" align="center" gap={3}>
-                                    <Box as="span" p={2} bg="blue.50" borderRadius="lg" color="blue.600">
+                                <Text fontSize="2xl" fontWeight="black" color={bodyTextColor} display="flex" align="center" gap={3}>
+                                    <Box as="span" p={2} bg={useColorModeValue("blue.50", "blue.900")} borderRadius="lg" color="blue.400">
                                         <FaMapMarkerAlt />
                                     </Box>
                                     {selectedDistrict ? selectedDistrict.name : 'Select a District'}
@@ -432,13 +475,15 @@ const DirectoryManager = () => {
                                 placeholder="Filter congregations by name..."
                                 value={searchLocale}
                                 onChange={(e) => setSearchLocale(e.target.value)}
-                                bg="white"
+                                bg={inputBg}
+                                color={bodyTextColor}
+                                borderColor={inputBorderColor}
+                                _placeholder={{ color: subTextColor }}
                                 borderRadius="2xl"
                                 pl={12}
                                 size="lg"
                                 shadow="xl"
-                                border="none"
-                                _focus={{ ring: 2, ringColor: "blue.400" }}
+                                _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px var(--chakra-colors-blue-400)" }}
                                 isDisabled={!selectedDistrict}
                             />
                             <Box position="absolute" left={4} top="50%" transform="translateY(-50%)" color="blue.400" fontSize="lg">
@@ -446,15 +491,15 @@ const DirectoryManager = () => {
                             </Box>
                         </Box>
 
-                        <Divider borderColor="rgba(0,0,0,0.05)" />
+                        <Divider borderColor={dividerColor} />
 
                         <Box flex="1" overflowY="auto" pr={2} sx={{
                             '&::-webkit-scrollbar': { width: '6px' },
                             '&::-webkit-scrollbar-track': { background: 'transparent' },
-                            '&::-webkit-scrollbar-thumb': { background: 'rgba(0,0,0,0.1)', borderRadius: 'full' },
+                            '&::-webkit-scrollbar-thumb': { background: scrollbarThumb, borderRadius: 'full' },
                         }}>
                             {!selectedDistrict ? (
-                                <Flex h="100%" justify="center" align="center" color="gray.400" flexDir="column" gap={6}>
+                                <Flex h="100%" justify="center" align="center" color={emptyStateColor} flexDir="column" gap={6}>
                                     <motion.div
                                         animate={{
                                             y: [0, -10, 0],
@@ -492,18 +537,18 @@ const DirectoryManager = () => {
                                             >
                                                 <Box
                                                     p={5}
-                                                    bg="rgba(255, 255, 255, 0.15)"
+                                                    bg={localeCardBg}
                                                     backdropFilter="blur(15px)"
                                                     borderRadius="2xl"
                                                     shadow="lg"
                                                     border="1px solid"
-                                                    borderColor="gray.50"
+                                                    borderColor={localeCardBorderColor}
                                                     position="relative"
                                                     overflow="hidden"
                                                     _hover={{
-                                                        borderColor: "blue.200",
+                                                        borderColor: localeCardHoverBorder,
                                                         shadow: "2xl",
-                                                        bg: "blue.50"
+                                                        bg: localeCardHoverBg
                                                     }}
                                                     transition="all 0.3s"
                                                 >
@@ -530,7 +575,7 @@ const DirectoryManager = () => {
                                                             <FaMapMarkerAlt size={16} />
                                                         </Flex>
                                                         <VStack align="start" spacing={1}>
-                                                            <Text fontWeight="black" fontSize="md" color="gray.800" lineHeight="tight">
+                                                            <Text fontWeight="black" fontSize="md" color={localeCardNameColor} lineHeight="tight">
                                                                 {l.name}
                                                             </Text>
                                                             <Text fontSize="xs" fontWeight="bold" color="blue.400" textTransform="uppercase" letterSpacing="tighter">
@@ -561,12 +606,12 @@ const DirectoryManager = () => {
             {/* DETAILS MODAL */}
             <Modal isOpen={isOpen} onClose={onClose} isCentered size="xl">
                 <ModalOverlay backdropFilter="blur(10px)" bg="blackAlpha.700" />
-                <ModalContent borderRadius="2xl" overflow="hidden" boxShadow="2xl">
+                <ModalContent borderRadius="2xl" overflow="hidden" boxShadow="2xl" bg={modalBg}>
                     <ModalHeader bg="blue.600" color="white" display="flex" align="center" gap={3} py={5}>
                         <FaMapMarkerAlt /> {selectedLocale?.name}
                     </ModalHeader>
                     <ModalCloseButton color="white" />
-                    <ModalBody p={0} bg="gray.50">
+                    <ModalBody p={0} bg={modalBg}>
                         {loadingDetails ? (
                             <Flex justify="center" align="center" h="400px" flexDir="column" gap={4}>
                                 <Spinner size="xl" color="blue.500" thickness="4px" />
@@ -576,9 +621,9 @@ const DirectoryManager = () => {
                             <Box h="70vh" overflowY="auto" p={6}>
                                 <VStack align="stretch" spacing={6}>
                                     {/* Address & Navigate */}
-                                    <Box bg="white" p={5} borderRadius="xl" border="1px solid" borderColor="gray.100" shadow="sm">
-                                        <Text fontSize="xs" fontWeight="black" color="gray.400" mb={2} letterSpacing="wider">PHYSICAL ADDRESS</Text>
-                                        <Text fontWeight="bold" color="gray.800" mb={4}>{localeDetails.address}</Text>
+                                    <Box bg={modalSectionBg} p={5} borderRadius="xl" border="1px solid" borderColor={modalSectionBorder} shadow="sm">
+                                        <Text fontSize="xs" fontWeight="black" color={modalLabelColor} mb={2} letterSpacing="wider">PHYSICAL ADDRESS</Text>
+                                        <Text fontWeight="bold" color={modalTextColor} mb={4}>{localeDetails.address}</Text>
 
                                         {localeDetails.navigateUrl && (
                                             <Button
@@ -612,7 +657,7 @@ const DirectoryManager = () => {
                                     )}
 
                                     {/* Schedule */}
-                                    <Box bg="white" p={5} borderRadius="xl" border="1px solid" borderColor="gray.100" shadow="sm">
+                                    <Box bg={modalSectionBg} p={5} borderRadius="xl" border="1px solid" borderColor={modalSectionBorder} shadow="sm">
                                         <Text fontSize="xs" fontWeight="black" color="blue.500" mb={4} letterSpacing="wider" display="flex" align="center" gap={2}>
                                             <FaClock /> WORSHIP SERVICES
                                         </Text>
@@ -632,7 +677,7 @@ const DirectoryManager = () => {
                                     </Box>
 
                                     {/* Contact */}
-                                    <Box bg="indigo.50" p={5} borderRadius="xl" border="1px solid" borderColor="indigo.100">
+                                    <Box bg={contactSectionBg} p={5} borderRadius="xl" border="1px solid" borderColor={contactSectionBorder}>
                                         <Text fontSize="xs" fontWeight="black" color="indigo.400" mb={3} letterSpacing="wider" display="flex" align="center" gap={2}>
                                             <FaPhoneAlt /> CONTACT INFORMATION
                                         </Text>
@@ -656,7 +701,7 @@ const DirectoryManager = () => {
             {/* EXPORT PROGRESS MODAL */}
             <Modal isOpen={isExportOpen} onClose={() => { }} isCentered closeOnOverlayClick={false}>
                 <ModalOverlay backdropFilter="blur(20px)" />
-                <ModalContent borderRadius="3xl" p={8} shadow="2xl" border="1px solid" borderColor="blue.100">
+                <ModalContent borderRadius="3xl" p={8} shadow="2xl" border="1px solid" borderColor={exportModalBorder} bg={exportModalBg}>
                     <VStack spacing={6}>
                         <Box position="relative">
                             <CircularProgress value={exportProgress} size="120px" thickness="8px" color="blue.500">
@@ -670,7 +715,7 @@ const DirectoryManager = () => {
                         </Box>
 
                         <VStack spacing={2} align="center">
-                            <Text fontWeight="black" fontSize="xl" color="blue.900" letterSpacing="tight">
+                            <Text fontWeight="black" fontSize="xl" color={exportTitleColor} letterSpacing="tight">
                                 {exportStatus === "Export Complete!" ? "DISTRICT EXPORT READY" : "GENERATING DIRECTORY"}
                             </Text>
                             <Text fontSize="sm" color="gray.500" fontWeight="bold" textAlign="center">

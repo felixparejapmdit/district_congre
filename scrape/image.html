@@ -4,79 +4,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Congregation Image Display</title>
+    <title>Lokal Image Hub</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f0f2f5;
             display: flex;
             justify-content: center;
-            padding: 40px;
+            padding: 15px;
+            margin: 0;
         }
 
-        .extractor-card {
+        .container {
             background: white;
-            padding: 30px;
-            border-radius: 16px;
+            padding: 25px;
+            border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 500px;
             text-align: center;
+            margin-top: 20px;
         }
 
         h2 {
             color: #1a73e8;
+            font-size: 22px;
             margin-bottom: 20px;
         }
 
-        textarea {
+        label {
+            display: block;
+            text-align: left;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        select {
             width: 100%;
-            height: 120px;
             padding: 12px;
             border: 2px solid #ddd;
             border-radius: 8px;
-            resize: none;
-            font-family: monospace;
-            font-size: 12px;
-            box-sizing: border-box;
-        }
-
-        textarea:focus {
-            border-color: #1a73e8;
+            font-size: 16px;
+            margin-bottom: 20px;
+            background: #fff;
             outline: none;
         }
 
-        button {
-            width: 100%;
-            padding: 15px;
-            background-color: #1a73e8;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: background 0.2s;
+        select:focus {
+            border-color: #1a73e8;
         }
 
-        button:hover {
-            background-color: #1557b0;
-        }
-
-        /* Image Display Area */
-        #displayArea {
-            margin-top: 25px;
+        #preview {
             display: none;
+            margin-top: 10px;
+            animation: fadeIn 0.4s ease-in-out;
         }
 
-        .image-container {
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .img-card {
             border: 2px solid #eee;
             border-radius: 12px;
             overflow: hidden;
-            background: #fafafa;
-            display: inline-block;
-            width: 100%;
+            background: #000;
         }
 
         img {
@@ -86,117 +88,100 @@
             margin: 0 auto;
         }
 
-        .url-label {
+        .url-box {
             font-size: 11px;
-            color: #777;
-            margin-top: 10px;
-            word-break: break-all;
-            background: #f9f9f9;
-            padding: 8px;
-            border-radius: 4px;
-        }
-
-        #toast {
-            visibility: hidden;
-            min-width: 200px;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 30px;
+            background: #f8f9fa;
             padding: 10px;
-            position: fixed;
-            z-index: 1;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
+            margin-top: 15px;
+            border-radius: 5px;
+            word-break: break-all;
+            color: #1a73e8;
+            border: 1px dashed #ccc;
+            text-align: left;
         }
 
-        #toast.show {
-            visibility: visible;
-            animation: fadein 0.5s;
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #34a853;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 15px;
         }
 
-        @keyframes fadein {
-            from {
-                bottom: 0;
-                opacity: 0;
-            }
-
-            to {
-                bottom: 30px;
-                opacity: 1;
-            }
+        button:active {
+            transform: scale(0.97);
         }
     </style>
 </head>
 
 <body>
 
-    <div class="extractor-card">
-        <h2>Congregation Extractor</h2>
-        <p style="font-size: 14px; color: #555;">Paste HTML Element or Direct Image URL:</p>
+    <div class="container">
+        <h2>Lokal Image Hub</h2>
 
-        <textarea id="rawInput" placeholder="Right-click Image > Inspect > Copy Element... then paste here."></textarea>
+        <label for="lokalSelect">Pumili ng Lokal sa Listahan:</label>
+        <select id="lokalSelect" onchange="showLokalImage()">
+            <option value="">-- Pumili Dito --</option>
 
-        <button onclick="displayAndCopy()">Process & Show Image</button>
+            <option
+                value="https://lh3.googleusercontent.com/gps-cs-s/AHVAweoxg6Ats1UrXxqfSIKJDuQdieanrrekBmxTgw76ogz0UL-U7sJnuw_uB_0bzZQPs3Ax6w1SNqf1aUbMoUErmtjeK8wW4NT2doVwLgmPeTshRy05rjZAqF46PsLPMFNJvy_OaUkAweB_9G61=w408-h306-k-no">
+                Lokal ng Templo Central</option>
+            <option
+                value="https://lh3.googleusercontent.com/gps-cs-s/AHVAwep4m2eSiMy2p-a-3MhKkLY_imvFRYR2TISstfzVuY5xzmPBsrxd7qutC6MwG3VB5ShqhpFoitobSAgoaeIElkVmEdu1IN0yefGMwlE5yxCTC1Ohqj4xOK4-K_bdAquPRizjE_o=w408-h544-k-no">
+                Lokal ng San Francisco del Monte</option>
 
-        <div id="displayArea">
-            <div class="image-container">
-                <img id="congregationImg" src="" alt="Congregation Preview" onerror="handleImageError()">
+            <option
+                value="https://lh3.googleusercontent.com/gps-cs-s/AHVAweoxg6Ats1UrXxqfSIKJDuQdieanrrekBmxTgw76ogz0UL-U7sJnuw_uB_0bzZQPs3Ax6w1SNqf1aUbMoUErmtjeK8wW4NT2doVwLgmPeTshRy05rjZAqF46PsLPMFNJvy_OaUkAweB_9G61=w408-h306-k-no4">
+                Lokal ng Bonifacio Drive</option>
+            <option
+                value="https://lh3.googleusercontent.com/gps-cs-s/AHVAweoxg6Ats1UrXxqfSIKJDuQdieanrrekBmxTgw76ogz0UL-U7sJnuw_uB_0bzZQPs3Ax6w1SNqf1aUbMoUErmtjeK8wW4NT2doVwLgmPeTshRy05rjZAqF46PsLPMFNJvy_OaUkAweB_9G61=w408-h306-k-no5">
+                Lokal ng Sagana</option>
+            <option
+                value="https://lh3.googleusercontent.com/gps-cs-s/AHVAweoxg6Ats1UrXxqfSIKJDuQdieanrrekBmxTgw76ogz0UL-U7sJnuw_uB_0bzZQPs3Ax6w1SNqf1aUbMoUErmtjeK8wW4NT2doVwLgmPeTshRy05rjZAqF46PsLPMFNJvy_OaUkAweB_9G61=w408-h306-k-no6">
+                Lokal ng Tandang Sora</option>
+        </select>
+
+        <div id="preview">
+            <div class="img-card">
+                <img id="outputImg" src="" alt="Lokal Image Preview">
             </div>
-            <div id="urlText" class="url-label"></div>
+            <div class="url-box" id="urlDisplay"></div>
+            <button onclick="copyCurrentLink()">Copy Image URL</button>
         </div>
     </div>
 
-    <div id="toast">Link copied to clipboard!</div>
-
     <script>
-        function displayAndCopy() {
-            const input = document.getElementById('rawInput').value.trim();
-            const img = document.getElementById('congregationImg');
-            const displayArea = document.getElementById('displayArea');
-            const urlText = document.getElementById('urlText');
+        function showLokalImage() {
+            const select = document.getElementById('lokalSelect');
+            const preview = document.getElementById('preview');
+            const img = document.getElementById('outputImg');
+            const urlDisplay = document.getElementById('urlDisplay');
 
-            let imageUrl = "";
+            const selectedLink = select.value;
 
-            // Check if the input is a direct URL
-            if (input.startsWith('http') && !input.includes('<')) {
-                imageUrl = input;
-            }
-            // Otherwise, treat it as an HTML snippet and find the <img> tag
-            else {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = input;
-                const foundImg = tempDiv.querySelector('img');
-                if (foundImg) {
-                    imageUrl = foundImg.getAttribute('src');
-                }
-            }
-
-            if (imageUrl) {
-                // Update the image source and show the area
-                img.src = imageUrl;
-                urlText.innerText = imageUrl;
-                displayArea.style.display = 'block';
-
-                // Auto-Copy to clipboard
-                navigator.clipboard.writeText(imageUrl).then(() => {
-                    showToast();
-                });
+            if (selectedLink) {
+                img.src = selectedLink;
+                urlDisplay.innerText = selectedLink;
+                preview.style.display = 'block';
             } else {
-                alert("No image found! Please make sure you are pasting the correct HTML element or a direct image link.");
+                preview.style.display = 'none';
             }
         }
 
-        function handleImageError() {
-            alert("The image could not be loaded. The URL might be expired or restricted.");
-            document.getElementById('displayArea').style.display = 'none';
-        }
-
-        function showToast() {
-            const x = document.getElementById("toast");
-            x.className = "show";
-            setTimeout(function () { x.className = x.className.replace("show", ""); }, 3000);
+        function copyCurrentLink() {
+            const urlText = document.getElementById('urlDisplay').innerText;
+            if (urlText) {
+                navigator.clipboard.writeText(urlText).then(() => {
+                    alert("Image URL copied to clipboard!");
+                }).catch(err => {
+                    console.error("Failed to copy:", err);
+                });
+            }
         }
     </script>
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import {
     Box,
     Input,
@@ -29,7 +29,9 @@ import {
     Link,
     Icon,
     useColorMode,
-    useColorModeValue
+    useColorModeValue,
+    Skeleton,
+    SkeletonText
 } from "@chakra-ui/react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -71,6 +73,12 @@ const LocalCongregations = () => {
     const [selectedLocale, setSelectedLocale] = useState(null);
     const [isScraping, setIsScraping] = useState(false);
 
+    // Timezone States
+    const [localeTimezone, setLocaleTimezone] = useState(null);  // IANA tz string
+    const [currentTime, setCurrentTime] = useState(new Date());
+    const clockRef = useRef(null);
+
+
     // Responsive
     const isMobile = useBreakpointValue({ base: true, md: false });
 
@@ -84,9 +92,72 @@ const LocalCongregations = () => {
     const accentColor = "blue.500";
     const titleColor = useColorModeValue("gray.800", "white");
     const subTextColor = useColorModeValue("gray.500", "gray.400");
+    const imageBorderColor = useColorModeValue("white", "whiteAlpha.200");
 
     useEffect(() => {
         init();
+    }, []);
+
+    // Live clock — ticks every second
+    useEffect(() => {
+        clockRef.current = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(clockRef.current);
+    }, []);
+
+    // Timezone lookup via free timeapi.io (no API key needed)
+    const fetchTimezone = useCallback(async (lat, lng) => {
+        if (!lat || !lng) { setLocaleTimezone(null); return; }
+        try {
+            const res = await fetch(`https://timeapi.io/api/TimeZone/coordinate?latitude=${lat}&longitude=${lng}`);
+            const data = await res.json();
+            if (data && data.timeZone) setLocaleTimezone(data.timeZone);
+            else setLocaleTimezone(null);
+        } catch {
+            setLocaleTimezone(null);
+        }
+    }, []);
+
+
+    // Timezone helper: get offset diff from PH (Asia/Manila = UTC+8)
+    const getTimezoneInfo = useCallback((tzName, now) => {
+        if (!tzName) return null;
+        try {
+            const fmt = (tz) => new Intl.DateTimeFormat('en-PH', {
+                timeZone: tz,
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: true
+            }).format(now);
+
+            const fmtDate = (tz) => new Intl.DateTimeFormat('en-PH', {
+                timeZone: tz,
+                weekday: 'short', month: 'short', day: 'numeric'
+            }).format(now);
+
+            // Calculate UTC offset in hours for both timezones
+            const toOffset = (tz) => {
+                const d = new Date(now);
+                const local = new Date(d.toLocaleString('en-US', { timeZone: tz }));
+                const utc = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
+                return (local - utc) / 3600000;
+            };
+
+            const phOffset = toOffset('Asia/Manila');       // always +8
+            const locOffset = toOffset(tzName);
+            const diff = locOffset - phOffset;
+
+            return {
+                phTime: fmt('Asia/Manila'),
+                phDate: fmtDate('Asia/Manila'),
+                localeTime: fmt(tzName),
+                localeDate: fmtDate(tzName),
+                diff,
+                diffLabel: diff === 0 ? 'SAME AS PH' : `${diff > 0 ? '+' : ''}${diff}h FROM PH`,
+                diffColor: diff === 0 ? 'green' : diff > 0 ? 'purple' : 'orange',
+                tzShort: tzName.split('/').pop().replace(/_/g, ' '),
+            };
+        } catch {
+            return null;
+        }
     }, []);
 
     const init = async () => {
@@ -138,30 +209,64 @@ const LocalCongregations = () => {
     }, [searchTerm, allCongregations]);
 
     const handleSelectLocale = async (locale) => {
-        setSelectedLocale(locale);
+        // Step 1: Open drawer immediately using DB data as placeholder
+        setSelectedLocale({
+            ...locale,
+            imageUrl: locale.image_url || null,
+        });
+        setLocaleTimezone(null); // Reset on each new selection
         onOpen();
         setIsScraping(true);
+        // Pre-fetch timezone from DB coordinates immediately (fastest path)
+        fetchTimezone(locale.latitude, locale.longitude);
+
         try {
-            const cleanName = (locale.slug || locale.name).toLowerCase().replace(/\s+/g, '-').replace(/[.,']/g, '');
+            const cleanName = (locale.slug || locale.name)
+                .toLowerCase()
+                .replace(/\s+/g, '-')
+                .replace(/[.,\']/g, '');
             const { data: scraped } = await axios.get(`${SCRAPER_BASE}/scrape/${cleanName}`);
+
             if (scraped && scraped.success !== false) {
+                // Step 2: Image priority: scraper lh5 > scraper generic > DB fallback
+                let bestImageUrl = locale.image_url || null;
+                const scraperImg = scraped.imageUrl || scraped.image_url;
+                if (scraperImg) {
+                    if (/lh[35]\.googleusercontent\.com/.test(scraperImg)) {
+                        // Stable Google URL — normalize to =s800 for best quality
+                        bestImageUrl = `${scraperImg.split('=')[0]}=s800`;
+                    } else {
+                        bestImageUrl = scraperImg;
+                    }
+                }
+
                 const fresh = {
                     ...locale,
                     ...scraped,
+                    imageUrl: bestImageUrl,
                     latitude: scraped.latitude || locale.latitude,
                     longitude: scraped.longitude || locale.longitude,
-                    imageUrl: scraped.imageUrl || locale.image_url,
                 };
+
                 setSelectedLocale(fresh);
-                // Update global data so distance on card updates
+                // Cache result so next click is instant
                 setAllCongregations(prev => prev.map(c => c.id === locale.id ? fresh : c));
+                // Fetch timezone using the best-available coordinates
+                fetchTimezone(fresh.latitude, fresh.longitude);
             }
         } catch (err) {
-            console.warn("Live scrape failed", err);
+            console.warn("Live scrape failed, using DB fallback", err);
+            toast({
+                title: "Using Cached Data",
+                description: "Live scrape failed. Showing database info.",
+                status: "warning",
+                duration: 3000,
+            });
         } finally {
             setIsScraping(false);
         }
     };
+
 
     return (
         <Box
@@ -281,9 +386,31 @@ const LocalCongregations = () => {
 
                     <DrawerBody p={0} overflowY="auto" sx={{ '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bg: 'blue.500' } }}>
                         {isScraping ? (
-                            <Flex h="full" align="center" justify="center" direction="column" gap={6}>
-                                <Spinner size="xl" thickness="5px" color="blue.500" /><Text fontWeight="black" color="blue.500" letterSpacing="widest">SYNCING LIVE DATA...</Text>
-                            </Flex>
+                            // Skeleton loader — mirrors the real drawer layout
+                            <VStack spacing={0} align="stretch">
+                                {/* Image skeleton */}
+                                <Skeleton h="250px" w="100%" />
+                                <VStack p={6} spacing={5} align="stretch">
+                                    {/* Action button skeleton */}
+                                    <Skeleton h="60px" borderRadius="2xl" />
+                                    {/* Proximity card skeleton */}
+                                    <Box p={6} borderRadius="3xl" border="1px solid" borderColor={borderColor}>
+                                        <Skeleton h="14px" w="50%" mb={4} />
+                                        <HStack spacing={3}>
+                                            <Skeleton h="60px" flex={1} borderRadius="xl" />
+                                            <Skeleton h="60px" flex={1} borderRadius="xl" />
+                                            <Skeleton h="60px" flex={1} borderRadius="xl" />
+                                        </HStack>
+                                    </Box>
+                                    {/* Info card skeleton */}
+                                    <Box p={6} borderRadius="3xl" border="1px solid" borderColor={borderColor}>
+                                        <Skeleton h="14px" w="40%" mb={4} />
+                                        <SkeletonText noOfLines={3} spacing={3} />
+                                        <Skeleton h="14px" w="40%" mt={6} mb={4} />
+                                        <SkeletonText noOfLines={5} spacing={2} />
+                                    </Box>
+                                </VStack>
+                            </VStack>
                         ) : selectedLocale ? (
                             <VStack align="stretch" spacing={0}>
                                 <VStack p={6} spacing={8} align="stretch">
@@ -294,18 +421,20 @@ const LocalCongregations = () => {
                                             overflow="hidden"
                                             shadow="2xl"
                                             border="4px solid"
-                                            borderColor="whiteAlpha.100"
+                                            borderColor={imageBorderColor}
+                                            mb={4} // Margin bottom para may space sa button
                                             as={motion.div}
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{ opacity: 1, scale: 1 }}
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
                                         >
                                             <Image
-                                                src={selectedLocale.imageUrl}
+                                                src={selectedLocale.imageUrl || 'https://via.placeholder.com/600x400?text=No+Image+Available'}
                                                 w="100%"
                                                 h="250px"
                                                 objectFit="cover"
+                                                fallback={<Box h="250px" bg="gray.200" display="flex" alignItems="center" justifyContent="center"><Spinner /></Box>}
                                                 transition="transform 0.5s ease"
-                                                _hover={{ transform: 'scale(1.05)' }}
+                                                _hover={{ transform: 'scale(1.03)' }}
                                             />
                                         </Box>
                                     )}
@@ -345,6 +474,48 @@ const LocalCongregations = () => {
                                             </VStack>
                                         </SimpleGrid>
                                     </Box>
+
+                                    {/* Timezone World Clock */}
+                                    {selectedLocale.latitude && selectedLocale.longitude && (() => {
+                                        const tzInfo = getTimezoneInfo(localeTimezone, currentTime);
+                                        if (!localeTimezone) return (
+                                            <Box bg={infoBoxBg} p={6} borderRadius="3xl" border="1px solid" borderColor={borderColor}>
+                                                <Skeleton h="12px" w="35%" mb={4} />
+                                                <HStack spacing={4}>
+                                                    <Skeleton h="90px" flex={1} borderRadius="2xl" />
+                                                    <Skeleton h="90px" flex={1} borderRadius="2xl" />
+                                                </HStack>
+                                            </Box>
+                                        );
+                                        if (!tzInfo) return null;
+                                        return (
+                                            <Box bg={infoBoxBg} p={6} borderRadius="3xl" shadow="md" border="1px solid" borderColor={borderColor}>
+                                                <HStack mb={4} justify="space-between">
+                                                    <HStack color="purple.500">
+                                                        <FaClock />
+                                                        <Text fontSize="xs" fontWeight="1000" letterSpacing="widest">WORLD CLOCK</Text>
+                                                    </HStack>
+                                                    <Badge colorScheme={tzInfo.diffColor} borderRadius="full" px={3} py={1} fontSize="10px" fontWeight="black">
+                                                        {tzInfo.diffLabel}
+                                                    </Badge>
+                                                </HStack>
+                                                <SimpleGrid columns={2} spacing={4}>
+                                                    <Box p={4} borderRadius="2xl" bg="blue.500" color="white" textAlign="center">
+                                                        <Text fontSize="8px" fontWeight="black" opacity={0.8} mb={1} letterSpacing="wider">🇵🇭 PHILIPPINES</Text>
+                                                        <Text fontSize="lg" fontWeight="black" fontFamily="monospace">{tzInfo.phTime}</Text>
+                                                        <Text fontSize="9px" opacity={0.75} mt={1}>{tzInfo.phDate}</Text>
+                                                        <Text fontSize="8px" opacity={0.6} mt="2px">Asia/Manila · UTC+8</Text>
+                                                    </Box>
+                                                    <Box p={4} borderRadius="2xl" bg={`${tzInfo.diffColor}.500`} color="white" textAlign="center">
+                                                        <Text fontSize="8px" fontWeight="black" opacity={0.8} mb={1} letterSpacing="wider">📍 {tzInfo.tzShort.toUpperCase()}</Text>
+                                                        <Text fontSize="lg" fontWeight="black" fontFamily="monospace">{tzInfo.localeTime}</Text>
+                                                        <Text fontSize="9px" opacity={0.75} mt={1}>{tzInfo.localeDate}</Text>
+                                                        <Text fontSize="8px" opacity={0.6} mt="2px" noOfLines={1}>{localeTimezone}</Text>
+                                                    </Box>
+                                                </SimpleGrid>
+                                            </Box>
+                                        );
+                                    })()}
 
                                     {/* Core Information */}
                                     <Box bg={infoBoxBg} p={6} borderRadius="3xl" shadow="md" border="1px solid" borderColor={borderColor}>

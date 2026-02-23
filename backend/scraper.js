@@ -129,36 +129,63 @@ const runScraper = async (congregation, url) => {
         // 4. FALLBACK: If no official image, try to search Google Maps hero image
         if (!detailsData.imageUrl && detailsData.latitude && detailsData.longitude) {
             try {
-                // Use the extracted name for more accurate search, if not found use slug
                 const searchName = detailsData.name || congregation.replace(/-/g, ' ');
                 const searchQuery = `Iglesia Ni Cristo ${searchName} Local`;
                 const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}/@${detailsData.latitude},${detailsData.longitude},17z`;
 
                 const gPage = await browser.newPage();
-                // Set a realistic user agent
                 await gPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
                 await gPage.goto(searchUrl, { waitUntil: "networkidle2", timeout: 15000 });
 
-                // Selector for the hero image in Google Maps (class 'aoRNLd' from user hint)
+                // Strategy A: Scan page HTML source for stable lh5.googleusercontent.com/p/ pattern
                 try {
-                    await gPage.waitForSelector('button.aoRNLd img', { timeout: 7000 });
-                    const gImg = await gPage.evaluate(() => {
-                        const img = document.querySelector('button.aoRNLd img');
-                        return img ? img.src : null;
-                    });
-                    if (gImg) {
-                        detailsData.imageUrl = gImg;
-                        console.log(`📸 Found Google Maps image for: ${searchName}`);
+                    const pageContent = await gPage.content();
+                    // Match lh5.googleusercontent.com/p/ URLs — the most stable Google Maps photo URLs
+                    const lh5Match = pageContent.match(/https:\/\/lh[35]\.googleusercontent\.com\/p\/[A-Za-z0-9_\-]+=[\.\w]*/);
+                    if (lh5Match) {
+                        // Append =s800 for a high-quality 800px image
+                        const rawUrl = lh5Match[0].split('=')[0]; // strip any existing size suffix
+                        detailsData.imageUrl = `${rawUrl}=s800`;
+                        console.log(`📸 [lh5 pattern] Found stable image for: ${searchName}`);
                     }
-                } catch (selectorError) {
-                    console.log(`⚠️ No image element found for: ${searchName}`);
+                } catch (parseErr) {
+                    console.log(`⚠️ lh5 pattern parse failed for: ${searchName}`);
+                }
+
+                // Strategy B: Fallback to button.aoRNLd selector if lh5 not found
+                if (!detailsData.imageUrl) {
+                    try {
+                        await gPage.waitForSelector('button.aoRNLd img', { timeout: 5000 });
+                        const gImg = await gPage.evaluate(() => {
+                            // Look for any img whose src matches the lh5 pattern
+                            const imgs = Array.from(document.querySelectorAll('img'));
+                            const lh5Img = imgs.find(img => img.src && /lh[35]\.googleusercontent\.com\/p\//.test(img.src));
+                            if (lh5Img) return lh5Img.src;
+                            // Fallback: use the aoRNLd button's img
+                            const btn = document.querySelector('button.aoRNLd img');
+                            return btn ? btn.src : null;
+                        });
+                        if (gImg) {
+                            // Normalize: strip size suffix and append =s800
+                            const rawUrl = gImg.split('=')[0];
+                            detailsData.imageUrl = `${rawUrl}=s800`;
+                            console.log(`📸 [aoRNLd] Found image for: ${searchName}`);
+                        }
+                    } catch (selectorError) {
+                        console.log(`⚠️ No image element found for: ${searchName}`);
+                    }
                 }
 
                 await gPage.close();
             } catch (e) {
                 console.log("Google image fallback failed or timed out:", e.message);
             }
+        }
+
+        // If we have an official site image, also normalize it with =s800 if it's a Google URL
+        if (detailsData.imageUrl && /lh[35]\.googleusercontent\.com/.test(detailsData.imageUrl)) {
+            const rawUrl = detailsData.imageUrl.split('=')[0];
+            detailsData.imageUrl = `${rawUrl}=s800`;
         }
 
         return { ...detailsData, success: true };

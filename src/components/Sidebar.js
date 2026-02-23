@@ -39,38 +39,27 @@ const NavItem = ({ icon, label, path, active, onClick, activeBg, hoverBg, active
     <Tooltip label={label} placement="bottom" hasArrow openDelay={400}>
         <HStack
             as={motion.div}
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.97 }}
             px={4}
             py={2}
             cursor="pointer"
-            borderRadius="xl"
+            borderRadius="lg"
             bg={active ? activeBg : "transparent"}
             color={active ? activeColor : inactiveColor}
             _hover={{ bg: active ? activeBg : hoverBg, color: active ? activeColor : hoverColor }}
             transition="all 0.2s"
             onClick={() => onClick(path)}
             spacing={2}
-            position="relative"
+            borderBottom="2px solid"
+            borderBottomColor={active ? "blue.400" : "transparent"}
+            borderBottomRadius="0"
+            mb="-2px"
         >
             <Icon as={icon} fontSize="sm" />
             <Text fontWeight="bold" fontSize="sm" whiteSpace="nowrap" letterSpacing="tight">
                 {label}
             </Text>
-            {active && (
-                <Box
-                    as={motion.div}
-                    layoutId="activeIndicator"
-                    position="absolute"
-                    bottom="-2px"
-                    left="50%"
-                    transform="translateX(-50%)"
-                    w="60%"
-                    h="2px"
-                    bg="blue.400"
-                    borderRadius="full"
-                />
-            )}
         </HStack>
     </Tooltip>
 );

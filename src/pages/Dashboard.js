@@ -44,18 +44,23 @@ const Dashboard = () => {
     }, []);
 
     // Theme-specific values
-    const overlayColor = useColorModeValue("rgba(255, 255, 255, 0.6)", "rgba(0, 0, 0, 0.7)");
-    const cardBg = useColorModeValue("rgba(255, 255, 255, 0.9)", "rgba(255, 255, 255, 0.85)");
-    const darkCardBg = useColorModeValue("rgba(0, 0, 0, 0.05)", "rgba(0, 0, 0, 0.4)");
+    const overlayColor = useColorModeValue("rgba(255,255,255,0.55)", "rgba(0,0,0,0.75)");
+    const cardBg = useColorModeValue("rgba(255,255,255,0.92)", "rgba(15,20,40,0.85)");
+    const darkCardBg = useColorModeValue("rgba(0,0,0,0.06)", "rgba(255,255,255,0.05)");
     const titleColor = useColorModeValue("blue.800", "white");
-    const statNumColor = useColorModeValue("blue.600", "blue.900");
-    const emeraldStatColor = useColorModeValue("green.600", "emerald.900");
+    const statLabelColor = useColorModeValue("gray.500", "gray.400");
+    const statNumColor = useColorModeValue("blue.600", "blue.300");
+    const emeraldStatColor = useColorModeValue("green.600", "green.300");
+    const statHelpTextBlue = useColorModeValue("blue.400", "blue.300");
+    const statHelpTextGreen = useColorModeValue("green.400", "green.300");
     const contrastText = useColorModeValue("gray.800", "white");
     const subTitleColor = useColorModeValue("blue.600", "blue.200");
-    const districtBorderColor = useColorModeValue("blue.100", "whiteAlpha.500");
-    const localeBorderColor = useColorModeValue("green.100", "whiteAlpha.500");
-    const dataMgmtBorderColor = useColorModeValue("orange.100", "whiteAlpha.100");
+    const districtBorderColor = useColorModeValue("blue.100", "blue.800");
+    const localeBorderColor = useColorModeValue("green.100", "green.900");
+    const dataMgmtBorderColor = useColorModeValue("orange.100", "orange.900");
     const dataMgmtLabelColor = useColorModeValue("gray.500", "gray.400");
+    const cardFooterBlue = useColorModeValue("blue.600", "blue.300");
+    const cardFooterGreen = useColorModeValue("green.600", "green.300");
     const syncBg = useColorModeValue("blackAlpha.50", "whiteAlpha.100");
     const syncHoverBg = useColorModeValue("blackAlpha.100", "whiteAlpha.200");
     const blurEffect = "blur(15px)";
@@ -63,7 +68,7 @@ const Dashboard = () => {
     return (
         <Box
             w="100%"
-            h="100vh"
+            h="calc(100vh - 58px)"
             backgroundImage="url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop')"
             backgroundSize="cover"
             backgroundPosition="center"
@@ -134,17 +139,17 @@ const Dashboard = () => {
                                 <VStack spacing={4}>
                                     <Icon as={FaGlobeAsia} w={12} h={12} color="blue.500" />
                                     <Stat>
-                                        <StatLabel fontWeight="black" color="gray.500" fontSize="sm">TOTAL DISTRICTS</StatLabel>
+                                        <StatLabel fontWeight="black" color={statLabelColor} fontSize="sm">TOTAL DISTRICTS</StatLabel>
                                         {loading ? <Spinner mt={2} /> : (
                                             <StatNumber fontSize="5xl" fontWeight="black" color={statNumColor}>
                                                 {stats.districtCount}
                                             </StatNumber>
                                         )}
-                                        <StatHelpText color="blue.400" fontWeight="bold">
+                                        <StatHelpText color={statHelpTextBlue} fontWeight="bold">
                                             Across the Globe
                                         </StatHelpText>
                                     </Stat>
-                                    <Text fontSize="xs" fontWeight="black" color="blue.600" textTransform="uppercase">
+                                    <Text fontSize="xs" fontWeight="black" color={cardFooterBlue} textTransform="uppercase">
                                         Click to Manage Districts
                                     </Text>
                                 </VStack>
@@ -171,17 +176,17 @@ const Dashboard = () => {
                                 <VStack spacing={4}>
                                     <Icon as={FaMapMarkerAlt} w={12} h={12} color="green.500" />
                                     <Stat>
-                                        <StatLabel fontWeight="black" color="gray.500" fontSize="sm">LOCAL CONGREGATIONS</StatLabel>
+                                        <StatLabel fontWeight="black" color={statLabelColor} fontSize="sm">LOCAL CONGREGATIONS</StatLabel>
                                         {loading ? <Spinner mt={2} /> : (
                                             <StatNumber fontSize="5xl" fontWeight="black" color={emeraldStatColor}>
                                                 {stats.congregationCount}
                                             </StatNumber>
                                         )}
-                                        <StatHelpText color="green.400" fontWeight="bold">
+                                        <StatHelpText color={statHelpTextGreen} fontWeight="bold">
                                             Officially Registered
                                         </StatHelpText>
                                     </Stat>
-                                    <Text fontSize="xs" fontWeight="black" color="green.600" textTransform="uppercase">
+                                    <Text fontSize="xs" fontWeight="black" color={cardFooterGreen} textTransform="uppercase">
                                         View Detailed Directory
                                     </Text>
                                 </VStack>

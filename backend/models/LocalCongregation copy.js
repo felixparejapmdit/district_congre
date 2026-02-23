@@ -40,50 +40,24 @@ const LocalCongregation = sequelize.define(
       allowNull: true,
       unique: true,
     },
-    // Updated to handle complex schedule strings or JSON
     schedule: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    // Flexible URL for the congregation photo
     image_url: {
       type: DataTypes.STRING(255),
       allowNull: true,
     },
-    // Stores phone numbers or emails
     contact: {
       type: DataTypes.TEXT,
       allowNull: true,
     },
-    // New: Link for "Open Maps" button
-    google_maps_link: {
-      type: DataTypes.STRING(500),
-      allowNull: true,
-    },
-    // New: Proximity data from Templo Central
-    air_distance: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-    },
-    road_distance: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-    },
-    travel_time: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-    },
-    // New: Difference from Philippine Time (e.g., "-12 hours")
-    timezone_diff: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-    }
   },
   {
     tableName: "local_congregation",
     timestamps: true,
-    createdAt: "created_at",
-    updatedAt: "updated_at",
+    createdAt: "created_at", // Map to 'created_at' column
+    updatedAt: "updated_at", // Map to 'updated_at' column
   }
 );
 
