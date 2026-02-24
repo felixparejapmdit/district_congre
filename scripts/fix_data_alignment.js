@@ -58,7 +58,7 @@ async function fixData() {
                 where: {
                     is_active: true,
                     slug: { [Op.ne]: null },
-                    updatedAt: { [Op.lt]: twoHoursAgo }
+                    updated_at: { [Op.lt]: twoHoursAgo }
                 }
             }
         );
