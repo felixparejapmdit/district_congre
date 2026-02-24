@@ -16,8 +16,17 @@ exports.getStats = async (req, res) => {
         });
 
         // 2. Active locale count (official directory locales only)
+        //    Excluding sub-locales (Ext/GWS) even if they are active on the site
         const congregationCount = await LocalCongregation.count({
-            where: { is_active: true },
+            where: {
+                is_active: true,
+                [Op.and]: [
+                    { name: { [Op.notLike]: '%Ext.%' } },
+                    { name: { [Op.notLike]: '%Extension%' } },
+                    { name: { [Op.notLike]: '%GWS%' } },
+                    { name: { [Op.notLike]: '%Group Worship%' } }
+                ]
+            },
             include: [{
                 model: District,
                 where: { is_active: true },
@@ -26,19 +35,23 @@ exports.getStats = async (req, res) => {
             }]
         });
 
-        // 3. Extension locales (Ext.) — tracked but not on official directory
+        // 3. Extension locales (Ext.)
         const extensionCount = await LocalCongregation.count({
             where: {
-                is_active: false,
-                name: { [Op.like]: '%Ext.%' }
+                [Op.or]: [
+                    { name: { [Op.like]: '%Ext.%' } },
+                    { name: { [Op.like]: '%Extension%' } }
+                ]
             }
         });
 
-        // 4. Group Worship Services (GWS) — tracked but not on official directory
+        // 4. Group Worship Services (GWS)
         const gwsCount = await LocalCongregation.count({
             where: {
-                is_active: false,
-                name: { [Op.or]: [{ [Op.like]: '%GWS%' }, { [Op.like]: '%Group Worship%' }] }
+                [Op.or]: [
+                    { name: { [Op.like]: '%GWS%' } },
+                    { name: { [Op.like]: '%Group Worship%' } }
+                ]
             }
         });
 
