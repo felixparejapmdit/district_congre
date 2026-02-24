@@ -5,6 +5,8 @@ WORKDIR /app
 # Pass the API URL from docker-compose/env during build time
 ARG REACT_APP_API_URL
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ARG REACT_APP_SCRAPER_HOST
+ENV REACT_APP_SCRAPER_HOST=$REACT_APP_SCRAPER_HOST
 
 COPY package*.json ./
 RUN npm install
