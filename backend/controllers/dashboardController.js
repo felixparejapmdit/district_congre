@@ -15,18 +15,10 @@ exports.getStats = async (req, res) => {
             }]
         });
 
-        // 2. Active locale count (official directory locales only)
-        //    Excluding sub-locales (Ext/GWS) even if they are active on the site
+        // 2. Active locale count (Official Total Locales)
+        //    Includes everything currently listed on the official directory site
         const congregationCount = await LocalCongregation.count({
-            where: {
-                is_active: true,
-                [Op.and]: [
-                    { name: { [Op.notLike]: '%Ext.%' } },
-                    { name: { [Op.notLike]: '%Extension%' } },
-                    { name: { [Op.notLike]: '%GWS%' } },
-                    { name: { [Op.notLike]: '%Group Worship%' } }
-                ]
-            },
+            where: { is_active: true },
             include: [{
                 model: District,
                 where: { is_active: true },
@@ -35,7 +27,7 @@ exports.getStats = async (req, res) => {
             }]
         });
 
-        // 3. Extension locales (Ext.)
+        // 3. Total Extensions recorded (Active and Inactive)
         const extensionCount = await LocalCongregation.count({
             where: {
                 [Op.or]: [
@@ -45,7 +37,19 @@ exports.getStats = async (req, res) => {
             }
         });
 
-        // 4. Group Worship Services (GWS)
+        // 3b. Active Extensions (part of the official total)
+        const activeExtensionCount = await LocalCongregation.count({
+            where: {
+                is_active: true,
+                [Op.or]: [
+                    { name: { [Op.like]: '%Ext.%' } },
+                    { name: { [Op.like]: '%Extension%' } }
+                ]
+            },
+            include: [{ model: District, where: { is_active: true }, required: true }]
+        });
+
+        // 4. Total GWS recorded (Active and Inactive)
         const gwsCount = await LocalCongregation.count({
             where: {
                 [Op.or]: [
@@ -55,7 +59,21 @@ exports.getStats = async (req, res) => {
             }
         });
 
-        // 5. Regional Stats for Pie Chart (active locales under active districts)
+        // 4b. Active GWS (part of the official total)
+        const activeGwsCount = await LocalCongregation.count({
+            where: {
+                is_active: true,
+                [Op.or]: [
+                    { name: { [Op.like]: '%GWS%' } },
+                    { name: { [Op.like]: '%Group Worship%' } }
+                ]
+            },
+            include: [{ model: District, where: { is_active: true }, required: true }]
+        });
+
+
+
+        // 6. Regional Stats for Pie Chart (active locales under active districts)
         const regionalData = await District.findAll({
             attributes: [
                 'region',
@@ -77,7 +95,7 @@ exports.getStats = async (req, res) => {
             value: parseInt(r.count)
         }));
 
-        // 6. Sync History for Timeline Graph (last 10 completed runs)
+        // 7. Sync History for Timeline Graph (last 10 completed runs)
         const syncHistory = await SyncHistory.findAll({
             where: { status: 'completed' },
             order: [['id', 'DESC']],
@@ -88,7 +106,9 @@ exports.getStats = async (req, res) => {
             districtCount,
             congregationCount,
             extensionCount,
+            activeExtensionCount,
             gwsCount,
+            activeGwsCount,
             regionalStats,
             syncHistory: syncHistory.reverse()
         });
@@ -116,7 +136,7 @@ exports.getSubLocales = async (req, res) => {
             : baseFilter;
 
         const locales = await LocalCongregation.findAll({
-            where: { is_active: false, name: nameWhere },
+            where: { name: nameWhere },
             // Include district with is_active so we can flag stale district references
             include: [{ model: District, attributes: ['name', 'region', 'is_active'], required: false }],
             order: [['name', 'ASC']],

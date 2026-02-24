@@ -376,26 +376,36 @@ const Settings = () => {
                                                 <Text fontWeight="black">SYNC RESULTS</Text>
                                                 <Badge colorScheme="green" ml="auto" borderRadius="full" px={3}>COMPLETE</Badge>
                                             </HStack>
-                                            <SimpleGrid columns={2} spacing={4}>
+                                            <SimpleGrid columns={{ base: 2, md: 3 }} spacing={4}>
                                                 <VStack align="start" spacing={0} p={3} bg="white" borderRadius="xl" border="1px solid" borderColor="green.100">
                                                     <Text fontSize="9px" color="green.600" fontWeight="black" letterSpacing="wider">DISTRICTS PROCESSED</Text>
                                                     <Text fontSize="2xl" fontWeight="black">{syncResult.stats.districtsProcessed}</Text>
                                                     <Text fontSize="9px" color="gray.400">{syncResult.stats.districtsCreated} new</Text>
                                                 </VStack>
-                                                <VStack align="start" spacing={0} p={3} bg="white" borderRadius="xl" border="1px solid" borderColor="green.100">
+                                                <VStack align="start" spacing={0} p={3} bg="white" borderRadius="xl" border="1px solid" borderColor="green.100" shadow="sm">
                                                     <Text fontSize="9px" color="green.600" fontWeight="black" letterSpacing="wider">ACTIVE LOCALES FOUND</Text>
                                                     <Text fontSize="2xl" fontWeight="black">{syncResult.stats.localesProcessed.toLocaleString()}</Text>
                                                     <Text fontSize="9px" color="gray.400">{syncResult.stats.localesCreated} newly added</Text>
                                                 </VStack>
+                                                <VStack align="start" spacing={0} p={3} bg="blue.50" borderRadius="xl" border="1px solid" borderColor="blue.100">
+                                                    <Text fontSize="9px" color="blue.600" fontWeight="black" letterSpacing="wider">RE-ACTIVATED LOCALES</Text>
+                                                    <Text fontSize="2xl" fontWeight="black" color="blue.600">{syncResult.stats.localesReactivated ?? 0}</Text>
+                                                    <Text fontSize="9px" color="blue.400">Returned to site</Text>
+                                                </VStack>
                                                 <VStack align="start" spacing={0} p={3} bg="orange.50" borderRadius="xl" border="1px solid" borderColor="orange.200">
                                                     <Text fontSize="9px" color="orange.600" fontWeight="black" letterSpacing="wider">STALE LOCALES HIDDEN</Text>
                                                     <Text fontSize="2xl" fontWeight="black" color="orange.600">{syncResult.stats.localesDeactivated ?? 0}</Text>
-                                                    <Text fontSize="9px" color="gray.400">IDs preserved, not deleted</Text>
+                                                    <Text fontSize="9px" color="orange.400">Preserved in DB</Text>
                                                 </VStack>
-                                                <VStack align="start" spacing={0} p={3} bg="blue.50" borderRadius="xl" border="1px solid" borderColor="blue.200">
-                                                    <Text fontSize="9px" color="blue.600" fontWeight="black" letterSpacing="wider">RE-ACTIVATED LOCALES</Text>
-                                                    <Text fontSize="2xl" fontWeight="black" color="blue.600">{syncResult.stats.localesReactivated ?? 0}</Text>
-                                                    <Text fontSize="9px" color="gray.400">Returned to official site</Text>
+                                                <VStack align="start" spacing={0} p={3} bg="yellow.50" borderRadius="xl" border="1px solid" borderColor="yellow.200">
+                                                    <Text fontSize="9px" color="yellow.700" fontWeight="black" letterSpacing="wider">OFFICIAL EXTENSIONS</Text>
+                                                    <Text fontSize="2xl" fontWeight="black" color="yellow.700">{syncResult.stats.extFound ?? 0}</Text>
+                                                    <Text fontSize="9px" color="yellow.600">Included in Total</Text>
+                                                </VStack>
+                                                <VStack align="start" spacing={0} p={3} bg="purple.50" borderRadius="xl" border="1px solid" borderColor="purple.200">
+                                                    <Text fontSize="9px" color="purple.600" fontWeight="black" letterSpacing="wider">OFFICIAL GWS</Text>
+                                                    <Text fontSize="2xl" fontWeight="black" color="purple.600">{syncResult.stats.gwsFound ?? 0}</Text>
+                                                    <Text fontSize="9px" color="purple.400">Included in Total</Text>
                                                 </VStack>
                                             </SimpleGrid>
                                         </Box>

@@ -45,7 +45,9 @@ const Dashboard = () => {
         districtCount: 0,
         congregationCount: 0,
         extensionCount: 0,
+        activeExtensionCount: 0,
         gwsCount: 0,
+        activeGwsCount: 0,
         regionalStats: [],
         syncHistory: []
     });
@@ -336,10 +338,15 @@ const Dashboard = () => {
                                     </Box>
                                     <VStack spacing={0} align="start">
                                         <Text fontSize="xs" fontWeight="black" color={statLabelColor}>EXTENSION LOCALES (Ext.)</Text>
-                                        <Skeleton isLoaded={!loading} h="20px" w="40px">
-                                            <Text fontSize="lg" fontWeight="black" color="orange.500">
-                                                {stats.extensionCount.toLocaleString()}
-                                            </Text>
+                                        <Skeleton isLoaded={!loading} h="20px" w="100px">
+                                            <HStack spacing={2} align="baseline">
+                                                <Text fontSize="lg" fontWeight="black" color="orange.500">
+                                                    {stats.extensionCount.toLocaleString()}
+                                                </Text>
+                                                <Text fontSize="9px" fontWeight="black" color="gray.400" whiteSpace="nowrap">
+                                                    ({stats.activeExtensionCount.toLocaleString()} active)
+                                                </Text>
+                                            </HStack>
                                         </Skeleton>
                                     </VStack>
                                 </HStack>
@@ -359,22 +366,19 @@ const Dashboard = () => {
                                     </Box>
                                     <VStack spacing={0} align="start">
                                         <Text fontSize="xs" fontWeight="black" color={statLabelColor}>GROUP WORSHIP SERVICES (GWS)</Text>
-                                        <Skeleton isLoaded={!loading} h="20px" w="40px">
-                                            <Text fontSize="lg" fontWeight="black" color="purple.500">
-                                                {stats.gwsCount.toLocaleString()}
-                                            </Text>
+                                        <Skeleton isLoaded={!loading} h="20px" w="100px">
+                                            <HStack spacing={2} align="baseline">
+                                                <Text fontSize="lg" fontWeight="black" color="purple.500">
+                                                    {stats.gwsCount.toLocaleString()}
+                                                </Text>
+                                                <Text fontSize="9px" fontWeight="black" color="gray.400" whiteSpace="nowrap">
+                                                    ({stats.activeGwsCount.toLocaleString()} active)
+                                                </Text>
+                                            </HStack>
                                         </Skeleton>
                                     </VStack>
                                 </HStack>
-                                <Box w="1px" h="40px" bg={districtBorderColor} display={{ base: 'none', md: 'block' }} />
-                                <VStack spacing={0} align="center">
-                                    <Text fontSize="xs" fontWeight="black" color={statLabelColor}>TOTAL INCL. SUB-LOCALES</Text>
-                                    <Skeleton isLoaded={!loading} h="20px" w="60px">
-                                        <Text fontSize="lg" fontWeight="black" color={titleColor}>
-                                            {(stats.congregationCount + stats.extensionCount + stats.gwsCount).toLocaleString()}
-                                        </Text>
-                                    </Skeleton>
-                                </VStack>
+
                             </Flex>
                         </Box>
 

@@ -159,7 +159,9 @@ const runSync = async () => {
         localesEnriched: 0,
         localesDeactivated: 0,
         localesReactivated: 0,
-        updatesFound: 0
+        updatesFound: 0,
+        extFound: 0,
+        gwsFound: 0
     };
 
     const districtsData = [];
@@ -253,6 +255,14 @@ const runSync = async () => {
                     }
                 }
                 stats.localesProcessed++;
+
+                // Track Ext/GWS found on the official site
+                const ln = l.name.toLowerCase();
+                if (ln.includes("ext.") || ln.includes("extension")) {
+                    stats.extFound++;
+                } else if (ln.includes("gws") || ln.includes("group worship service")) {
+                    stats.gwsFound++;
+                }
 
                 // ── 5. Enrich the locale with scraped + computed data ──────
                 console.log(`  🔍 Enriching: ${l.name} (${l.slug})`);

@@ -1,6 +1,8 @@
 const path = require('path');
+// Load settings in order of specificity (last one wins)
 require('dotenv').config({ path: path.join(__dirname, '../.env.proxmox') });
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
+require('dotenv').config({ path: path.join(__dirname, '../.env.development.local') });
 
 const { LocalCongregation, District } = require('../backend/models');
 const { Op } = require('sequelize');
