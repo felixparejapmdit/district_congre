@@ -443,6 +443,58 @@ const runSync = async () => {
 // ─── Export runSync so the scheduler can call it directly ────────────────────
 exports.runSync = runSync;
 
+// ─── Reset stuck sync (called from /api/sync/reset or on server startup) ──────
+exports.resetSyncStatus = async (req, res) => {
+    const wasRunning = syncProgress.status === "running";
+
+    // Reset in-memory state
+    syncProgress = {
+        status: "idle",
+        percentage: 0,
+        currentDistrict: "",
+        currentLocale: "",
+        processed: 0,
+        total: 0
+    };
+
+    // Mark any DB entries that are stuck as "failed"
+    let dbFixed = 0;
+    try {
+        const [count] = await SyncHistory.update(
+            { status: "failed", end_time: new Date(), error_message: "Manually reset — process was interrupted" },
+            { where: { status: "running" } }
+        );
+        dbFixed = count;
+    } catch (err) {
+        console.warn("Could not update stuck SyncHistory:", err.message);
+    }
+
+    console.log(`🔄 Sync status reset. Was running: ${wasRunning}. DB stuck entries fixed: ${dbFixed}`);
+    if (res) {
+        res.status(200).json({
+            message: "Sync status has been reset. You can now start a new sync.",
+            wasRunning,
+            dbEntriesFixed: dbFixed
+        });
+    }
+};
+
+// ─── Called on server startup to recover from a crashed/interrupted sync ───────
+exports.recoverStuckSync = async () => {
+    try {
+        const stuck = await SyncHistory.findAll({ where: { status: "running" } });
+        if (stuck.length > 0) {
+            await SyncHistory.update(
+                { status: "failed", end_time: new Date(), error_message: "Server restarted — sync was interrupted" },
+                { where: { status: "running" } }
+            );
+            console.log(`🔄 Startup recovery: marked ${stuck.length} interrupted sync(s) as failed.`);
+        }
+    } catch (err) {
+        console.warn("Startup sync recovery failed (non-fatal):", err.message);
+    }
+};
+
 // ─── HTTP Handler: POST /api/sync/directory ───────────────────────────────────
 exports.syncDirectoryData = async (req, res) => {
     try {

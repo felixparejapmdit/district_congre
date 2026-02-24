@@ -15,6 +15,7 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const syncRoutes = require("./routes/syncRoutes");
 const auditRoutes = require("./routes/auditRoutes");
 const scheduler = require("./scheduler");
+const { recoverStuckSync } = require("./controllers/synchronizationController");
 
 const app = express();
 
@@ -41,8 +42,10 @@ app.use(auditRoutes);
 // Start simple HTTP server (Nginx will handle the HTTPS part)
 sequelize.sync({ alter: true }).then(() => {
   console.log("✅ Database synced successfully");
-  http.createServer(app).listen(PORT, IP_ADDRESS, () => {
+  http.createServer(app).listen(PORT, IP_ADDRESS, async () => {
     console.log(`✅ Backend running internally on port ${PORT}`);
+    // Recover any sync that was interrupted by a previous server crash/restart
+    await recoverStuckSync();
     // Start the background scheduler (persists across page refreshes, not Docker restarts)
     scheduler.startScheduler();
   });

@@ -6,6 +6,7 @@ const scheduler = require("../scheduler");
 // ── Directory Sync ────────────────────────────────────────────────────────────
 router.post("/api/sync/directory", synchronizationController.syncDirectoryData);
 router.get("/api/sync/progress", synchronizationController.getSyncProgress);
+router.post("/api/sync/reset", synchronizationController.resetSyncStatus);
 
 // ── Scheduler Controls ────────────────────────────────────────────────────────
 // GET  /api/scheduler/status  — returns state, next run, last run, enabled flag

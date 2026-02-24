@@ -39,6 +39,7 @@ const Settings = () => {
     const [isSyncing, setIsSyncing] = useState(false);
     const [syncResult, setSyncResult] = useState(null);
     const [syncStats, setSyncStats] = useState({ percentage: 0, currentDistrict: "", currentLocale: "" });
+    const [syncStuck, setSyncStuck] = useState(false); // true when server returns 409
 
     // Scheduler state
     // Scheduler state
@@ -113,6 +114,23 @@ const Settings = () => {
             toast({ title: "Error", description: err.response?.data?.message || "Failed to update scheduler.", status: "error", duration: 3000 });
         } finally {
             setSchedulerLoading(false);
+        }
+    };
+
+    const handleResetSync = async () => {
+        try {
+            const { data } = await axios.post(`${API_BASE}/sync/reset`);
+            setSyncStuck(false);
+            toast({
+                title: "Sync Reset",
+                description: data.message,
+                status: "success",
+                duration: 4000,
+                isClosable: true,
+                position: "top-right"
+            });
+        } catch (err) {
+            toast({ title: "Reset Failed", description: err.response?.data?.message || "Could not reset sync status.", status: "error", duration: 4000, isClosable: true, position: "top-right" });
         }
     };
 
@@ -196,10 +214,10 @@ const Settings = () => {
             console.error("Sync error:", error);
             const status = error.response?.status;
             if (status === 409) {
-                // A sync is already running (scheduled or manual)
+                setSyncStuck(true);   // ← show the reset button
                 customToast(
                     "Sync Already Running",
-                    "A synchronization is already in progress. Please wait for it to complete before starting another.",
+                    "A synchronization is already in progress. If it appears stuck, use the \"Force Reset\" button below.",
                     "info"
                 );
             } else {
@@ -316,20 +334,38 @@ const Settings = () => {
                                                 </VStack>
                                             </VStack>
                                         ) : (
-                                            <Button
-                                                size="lg"
-                                                w="100%"
-                                                colorScheme="blue"
-                                                leftIcon={<FaSync />}
-                                                onClick={handleSync}
-                                                borderRadius="2xl"
-                                                h="70px"
-                                                fontSize="lg"
-                                                fontWeight="black"
-                                                shadow="xl"
-                                            >
-                                                GENERATE DATA
-                                            </Button>
+                                            <VStack spacing={3} w="100%">
+                                                <Button
+                                                    size="lg"
+                                                    w="100%"
+                                                    colorScheme="blue"
+                                                    leftIcon={<FaSync />}
+                                                    onClick={handleSync}
+                                                    borderRadius="2xl"
+                                                    h="70px"
+                                                    fontSize="lg"
+                                                    fontWeight="black"
+                                                    shadow="xl"
+                                                >
+                                                    GENERATE DATA
+                                                </Button>
+                                                {syncStuck && (
+                                                    <Button
+                                                        size="sm"
+                                                        w="100%"
+                                                        colorScheme="orange"
+                                                        variant="outline"
+                                                        leftIcon={<FaExclamationTriangle />}
+                                                        onClick={handleResetSync}
+                                                        borderRadius="xl"
+                                                        fontWeight="black"
+                                                        borderStyle="dashed"
+                                                        fontSize="xs"
+                                                    >
+                                                        FORCE RESET STUCK SYNC — Click if sync appears permanently stuck
+                                                    </Button>
+                                                )}
+                                            </VStack>
                                         )}
                                     </Box>
 
