@@ -330,17 +330,19 @@ const runSync = async () => {
 
             // ── 6. Soft-deactivate locales no longer on the site ─────────────
             //    IDs are NEVER deleted. is_active=false hides them from counts/search.
+            //    IMPORTANT: We explicitly guard slug IS NOT NULL because MySQL evaluates
+            //    NULL NOT IN (...) as UNKNOWN, which causes NULL-slug sub-locales
+            //    (Ext./GWS) to be incorrectly matched and deactivated.
             const liveslugs = localesInDistrict.map(l => l.slug).filter(Boolean);
             if (liveslugs.length > 0) {
                 const { Op } = require('sequelize');
-                // Deactivate DB locales in this district whose slug is not on the site
                 const deactivated = await LocalCongregation.update(
                     { is_active: false },
                     {
                         where: {
                             district_id: districtRecord.id,
                             is_active: true,
-                            slug: { [Op.notIn]: liveslugs }
+                            slug: { [Op.not]: null, [Op.notIn]: liveslugs }
                         }
                     }
                 );
