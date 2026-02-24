@@ -194,11 +194,21 @@ const Settings = () => {
             customToast("Sync Successful", data.message, "success");
         } catch (error) {
             console.error("Sync error:", error);
-            customToast(
-                "Sync Failed",
-                error.response?.data?.error || "An unexpected error occurred during synchronization.",
-                "error"
-            );
+            const status = error.response?.status;
+            if (status === 409) {
+                // A sync is already running (scheduled or manual)
+                customToast(
+                    "Sync Already Running",
+                    "A synchronization is already in progress. Please wait for it to complete before starting another.",
+                    "info"
+                );
+            } else {
+                customToast(
+                    "Sync Failed",
+                    error.response?.data?.error || error.response?.data?.message || "An unexpected error occurred during synchronization.",
+                    "error"
+                );
+            }
         } finally {
             setIsSyncing(false);
             clearInterval(pollInterval);

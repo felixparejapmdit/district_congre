@@ -401,34 +401,36 @@ const Dashboard = () => {
                                     </HStack>
                                     <Text fontSize="xs" fontWeight="bold" color="gray.400">Congregations per Region</Text>
                                 </HStack>
-                                <Skeleton isLoaded={!loading} w="100%" h="350px" borderRadius="xl">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart
-                                            data={stats.regionalStats}
-                                            layout="vertical"
-                                            margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
-                                        >
-                                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
-                                            <XAxis type="number" hide />
-                                            <YAxis
-                                                dataKey="name"
-                                                type="category"
-                                                width={140}
-                                                fontSize={10}
-                                                fontWeight="bold"
-                                                tick={{ fill: titleColor }}
-                                            />
-                                            <RechartsTooltip
-                                                contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
-                                                cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                                            />
-                                            <Bar dataKey="value" radius={[0, 10, 10, 0]}>
-                                                {stats.regionalStats.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                ))}
-                                            </Bar>
-                                        </BarChart>
-                                    </ResponsiveContainer>
+                                <Skeleton isLoaded={!loading} w="100%" h="350px" borderRadius="xl" minH="350px">
+                                    <Box w="100%" h="350px">
+                                        <ResponsiveContainer width="100%" height={350}>
+                                            <BarChart
+                                                data={stats.regionalStats}
+                                                layout="vertical"
+                                                margin={{ top: 5, right: 30, left: 40, bottom: 5 }}
+                                            >
+                                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
+                                                <XAxis type="number" hide />
+                                                <YAxis
+                                                    dataKey="name"
+                                                    type="category"
+                                                    width={140}
+                                                    fontSize={10}
+                                                    fontWeight="bold"
+                                                    tick={{ fill: titleColor }}
+                                                />
+                                                <RechartsTooltip
+                                                    contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                                                    cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                                                />
+                                                <Bar dataKey="value" radius={[0, 10, 10, 0]}>
+                                                    {stats.regionalStats.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                    ))}
+                                                </Bar>
+                                            </BarChart>
+                                        </ResponsiveContainer>
+                                    </Box>
                                 </Skeleton>
                             </VStack>
                         </Box>
