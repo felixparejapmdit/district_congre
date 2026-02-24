@@ -77,6 +77,11 @@ const LocalCongregation = sequelize.define(
     timezone_diff: {
       type: DataTypes.STRING(50),
       allowNull: true,
+    },
+    // Soft-delete flag: false = locale removed from official site, ID preserved
+    is_active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     }
   },
   {

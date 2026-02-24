@@ -157,6 +157,8 @@ const runSync = async () => {
         districtsCreated: 0,
         localesCreated: 0,
         localesEnriched: 0,
+        localesDeactivated: 0,
+        localesReactivated: 0,
         updatesFound: 0
     };
 
@@ -229,18 +231,22 @@ const runSync = async () => {
                 let locCreated = false;
 
                 if (locale) {
-                    await locale.update({ name: l.name, district_id: districtRecord.id });
+                    // Re-activate if it was previously deactivated
+                    const wasInactive = locale.is_active === false;
+                    await locale.update({ name: l.name, district_id: districtRecord.id, is_active: true });
+                    if (wasInactive) stats.localesReactivated++;
                 } else {
                     locale = await LocalCongregation.findOne({
                         where: { name: l.name, district_id: districtRecord.id }
                     });
                     if (locale) {
-                        await locale.update({ slug: l.slug });
+                        await locale.update({ slug: l.slug, is_active: true });
                     } else {
                         locale = await LocalCongregation.create({
                             name: l.name,
                             slug: l.slug,
-                            district_id: districtRecord.id
+                            district_id: districtRecord.id,
+                            is_active: true
                         });
                         locCreated = true;
                         stats.localesCreated++;
@@ -322,6 +328,29 @@ const runSync = async () => {
                 }
             }
 
+            // ── 6. Soft-deactivate locales no longer on the site ─────────────
+            //    IDs are NEVER deleted. is_active=false hides them from counts/search.
+            const liveslugs = localesInDistrict.map(l => l.slug).filter(Boolean);
+            if (liveslugs.length > 0) {
+                const { Op } = require('sequelize');
+                // Deactivate DB locales in this district whose slug is not on the site
+                const deactivated = await LocalCongregation.update(
+                    { is_active: false },
+                    {
+                        where: {
+                            district_id: districtRecord.id,
+                            is_active: true,
+                            slug: { [Op.notIn]: liveslugs }
+                        }
+                    }
+                );
+                const deactivatedCount = Array.isArray(deactivated) ? deactivated[0] : 0;
+                if (deactivatedCount > 0) {
+                    console.log(`  🗑️  Deactivated ${deactivatedCount} stale locale(s) in ${d.name}`);
+                    stats.localesDeactivated += deactivatedCount;
+                }
+            }
+
             console.log(`✅ [${syncProgress.percentage}%] Processed District: ${d.name}`);
         } catch (err) {
             console.error(`❌ Error processing district ${d.name}:`, err.message);
@@ -331,6 +360,72 @@ const runSync = async () => {
     syncProgress.status = "completed";
     syncProgress.percentage = 100;
     syncProgress.currentLocale = "";
+
+    // ── 7. Auto-reparent Ext./GWS sub-locales to their parent's current district ──
+    //    This fixes cases where a parent locale moved districts (e.g. district renamed)
+    //    but its sub-locales still point to the old district.
+    console.log("\n🔗 Reparenting Ext./GWS sub-locales to their parent's current district...");
+    let reparented = 0;
+    try {
+        const sequelize = require('../config/database');
+        // Get all inactive sub-locales with NULL slug
+        const [subLocales] = await sequelize.query(`
+            SELECT id, name, district_id FROM local_congregation
+            WHERE is_active = 0 AND slug IS NULL
+              AND (name LIKE '%Ext.%' OR name LIKE '%Extension%'
+                   OR name LIKE '%GWS%' OR name LIKE '%Group Worship%')
+        `);
+
+        for (const sub of subLocales) {
+            // Derive parent name candidates
+            const baseName = sub.name
+                .replace(/\s+Ext\.?\s*(\(.*\))?\s*$/i, '')
+                .replace(/\s+Extension\s*(\(.*\))?\s*$/i, '')
+                .replace(/\s+GWS\s*(\(.*\))?\s*$/i, '')
+                .replace(/\s+Group\s+Worship\s+(Service|Services)\s*(\(.*\))?\s*$/i, '')
+                .trim();
+
+            if (!baseName || baseName === sub.name) continue;
+
+            // Find the active parent locale
+            const [parentRows] = await sequelize.query(
+                `SELECT district_id FROM local_congregation
+                 WHERE is_active = 1 AND slug IS NOT NULL AND name = :name LIMIT 1`,
+                { replacements: { name: baseName } }
+            );
+
+            if (parentRows.length > 0 && parentRows[0].district_id !== sub.district_id) {
+                await sequelize.query(
+                    `UPDATE local_congregation SET district_id = :newId WHERE id = :id`,
+                    { replacements: { newId: parentRows[0].district_id, id: sub.id } }
+                );
+                reparented++;
+            }
+        }
+        console.log(`   ✅ Reparented ${reparented} sub-locale(s)`);
+    } catch (err) {
+        console.warn(`   ⚠️  Reparenting step failed (non-fatal): ${err.message}`);
+    }
+
+    // ── 8. Global cleanup: deactivate any active locale under an inactive district ──
+    //    Catches locales that were missed by Step 6 because their district was
+    //    already retired (not processed in the district loop at all).
+    try {
+        const sequelize = require('../config/database');
+        const [globalCleanResult] = await sequelize.query(`
+            UPDATE local_congregation lc
+            INNER JOIN districts d ON lc.district_id = d.id
+            SET lc.is_active = 0
+            WHERE lc.is_active = 1 AND d.is_active = 0
+        `);
+        const globalCleaned = globalCleanResult?.affectedRows ?? 0;
+        if (globalCleaned > 0) {
+            console.log(`🧹 Global cleanup: deactivated ${globalCleaned} locale(s) under retired districts`);
+            stats.localesDeactivated += globalCleaned;
+        }
+    } catch (err) {
+        console.warn(`   ⚠️  Global cleanup step failed (non-fatal): ${err.message}`);
+    }
 
     await history.update({
         end_time: new Date(),

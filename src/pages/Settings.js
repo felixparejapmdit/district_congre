@@ -324,23 +324,37 @@ const Settings = () => {
                                     </Box>
 
                                     {syncResult && (
-                                        <Box p={6} bg="emerald.50" borderRadius="2xl" border="1px solid" borderColor="emerald.200">
-                                            <HStack color="emerald.600" spacing={2} mb={4}>
+                                        <Box p={6} bg="green.50" borderRadius="2xl" border="1px solid" borderColor="green.200">
+                                            <HStack color="green.600" spacing={2} mb={4}>
                                                 <FaCheckCircle />
                                                 <Text fontWeight="black">SYNC RESULTS</Text>
+                                                <Badge colorScheme="green" ml="auto" borderRadius="full" px={3}>COMPLETE</Badge>
                                             </HStack>
                                             <SimpleGrid columns={2} spacing={4}>
-                                                <VStack align="start" spacing={0}>
-                                                    <Text fontSize="xs" color="emerald.600" fontWeight="bold">DISTRICTS PROCESSED</Text>
-                                                    <Text fontSize="xl" fontWeight="black">{syncResult.stats.districtsProcessed}</Text>
+                                                <VStack align="start" spacing={0} p={3} bg="white" borderRadius="xl" border="1px solid" borderColor="green.100">
+                                                    <Text fontSize="9px" color="green.600" fontWeight="black" letterSpacing="wider">DISTRICTS PROCESSED</Text>
+                                                    <Text fontSize="2xl" fontWeight="black">{syncResult.stats.districtsProcessed}</Text>
+                                                    <Text fontSize="9px" color="gray.400">{syncResult.stats.districtsCreated} new</Text>
                                                 </VStack>
-                                                <VStack align="start" spacing={0}>
-                                                    <Text fontSize="xs" color="emerald.600" fontWeight="bold">LOCALES PROCESSED</Text>
-                                                    <Text fontSize="xl" fontWeight="black">{syncResult.stats.localesProcessed}</Text>
+                                                <VStack align="start" spacing={0} p={3} bg="white" borderRadius="xl" border="1px solid" borderColor="green.100">
+                                                    <Text fontSize="9px" color="green.600" fontWeight="black" letterSpacing="wider">ACTIVE LOCALES FOUND</Text>
+                                                    <Text fontSize="2xl" fontWeight="black">{syncResult.stats.localesProcessed.toLocaleString()}</Text>
+                                                    <Text fontSize="9px" color="gray.400">{syncResult.stats.localesCreated} newly added</Text>
+                                                </VStack>
+                                                <VStack align="start" spacing={0} p={3} bg="orange.50" borderRadius="xl" border="1px solid" borderColor="orange.200">
+                                                    <Text fontSize="9px" color="orange.600" fontWeight="black" letterSpacing="wider">STALE LOCALES HIDDEN</Text>
+                                                    <Text fontSize="2xl" fontWeight="black" color="orange.600">{syncResult.stats.localesDeactivated ?? 0}</Text>
+                                                    <Text fontSize="9px" color="gray.400">IDs preserved, not deleted</Text>
+                                                </VStack>
+                                                <VStack align="start" spacing={0} p={3} bg="blue.50" borderRadius="xl" border="1px solid" borderColor="blue.200">
+                                                    <Text fontSize="9px" color="blue.600" fontWeight="black" letterSpacing="wider">RE-ACTIVATED LOCALES</Text>
+                                                    <Text fontSize="2xl" fontWeight="black" color="blue.600">{syncResult.stats.localesReactivated ?? 0}</Text>
+                                                    <Text fontSize="9px" color="gray.400">Returned to official site</Text>
                                                 </VStack>
                                             </SimpleGrid>
                                         </Box>
                                     )}
+
 
                                     <Divider />
 
