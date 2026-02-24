@@ -1,70 +1,79 @@
-# Getting Started with Create React App
+# INC Directory Management & Sync System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A robust full-stack platform designed to synchronize, enrich, and manage the official Iglesia Ni Cristo (INC) directory. It features automated scraping, data enrichment (distance, maps, photos), and complex sub-locale (Extension/GWS) relationship management.
 
-## Available Scripts
+## 🚀 Key Features
 
-In the project directory, you can run:
+*   **Automated Sync Engine:** 8-step core logic for high-fidelity synchronization with the official directory.
+*   **Intelligent Enrichment:** Automatically fetches coordinates, street addresses, and images for every locale.
+*   **Sub-Locale Management:** Specialized tracking for Extensions (Ext.) and Group Worship Services (GWS), including auto-reparenting when parent locales move districts.
+*   **Dynamic Dashboard:** Real-time statistics, regional distribution charts, and synchronization history.
+*   **Built-in Scheduler:** Configurable cron-based background synchronization.
+*   **PWA Ready:** Manifest and Service Worker support for offline access and mobile installation.
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## 🛠 Tech Stack
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+*   **Frontend:** React 18, Chakra UI, Framer Motion, Recharts, Leaflet.
+*   **Backend:** Node.js, Express, Sequelize ORM.
+*   **Database:** MySQL 8.0.
+*   **DevOps:** Docker, Docker Compose, Nginx.
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 🏗 System Architecture
 
-### `npm run build`
+### 🔄 The Synchronization Workflow
+The `runSync` process follows an optimized 8-step pipeline to ensure data integrity:
+1.  **Status Reset:** All districts are marked inactive to provide a clean slate.
+2.  **District Sync:** Fetches active districts from the official site.
+3.  **Locale Fetching:** Scrapes all congregations within found districts.
+4.  **Data Update:** Maps congregations to districts and refreshes `slug` data.
+5.  **Enrichment:** Periodically refreshes metadata (Photos, Schedule, Contact Info).
+6.  **Per-District Cleanup:** Deactivates locales no longer listed on the site.
+7.  **Auto-Reparenting:** (NEW) Re-links Ext./GWS sub-locales to their parent's current district (e.g., if a district was renamed).
+8.  **Global Cleanup:** (NEW) Final safety pass to deactivate any locale under a retired district.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 🛡 Reliability & Recovery
+*   **Crashed Sync Recovery:** The system automatically detects and fixes "stuck" syncs (409 errors) on server startup.
+*   **Manual Reset:** Administrators can force-reset the sync status from the Settings page if a process appears permanently stalled.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 📦 Deployment (Proxmox / Production)
 
-### `npm run eject`
+The project is optimized for deployment in Proxmox LXC containers or standard Docker environments.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### 1. Configuration
+Use the `.env.proxmox` file for production-specific variables (Database IP, HTTPS URLs, etc.).
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 2. Deployment Script
+Run the automated deployment script to rebuild and restart the containers:
+```bash
+bash deploy_prod.sh
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### 3. Data Alignment
+After a fresh sync, if counts appear mismatched (e.g., congregations vs. extensions), run the alignment script:
+```bash
+node scripts/fix_data_alignment.js
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## 📂 Project Structure
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+*   `/backend/controllers`: Core logic (`synchronizationController`, `dashboardController`, etc.)
+*   `/backend/models`: Database schema (District, LocalCongregation, SyncHistory)
+*   `/src/pages`: User interface (Dashboard, LocalCongregations, Settings)
+*   `/scripts`: Maintenance utilities (Data fixing, Reparenting, Audits)
+*   `/nginx`: Configuration for production routing and security.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
+## 📜 Development Commands
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+*   `npm start`: Runs both frontend (3000) and backend (3001) concurrently.
+*   `npm run backend`: Runs the server only (with nodemon).
+*   `npm run react`: Runs the frontend development server only.
