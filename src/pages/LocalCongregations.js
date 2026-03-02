@@ -13,6 +13,12 @@ import {
     DrawerBody,
     DrawerCloseButton,
     useDisclosure,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalCloseButton,
     Button,
     HStack,
     IconButton,
@@ -81,6 +87,11 @@ const LocalCongregations = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
     const clockRef = useRef(null);
 
+    // Shared Schedule States
+    const { isOpen: isMatchingOpen, onOpen: onMatchingOpen, onClose: onMatchingClose } = useDisclosure();
+    const [matchingLocales, setMatchingLocales] = useState([]);
+    const [clickedTime, setClickedTime] = useState("");
+
 
     // Responsive
     const isMobile = useBreakpointValue({ base: true, md: false });
@@ -96,6 +107,10 @@ const LocalCongregations = () => {
     const titleColor = useColorModeValue("gray.800", "white");
     const subTextColor = useColorModeValue("gray.500", "gray.400");
     const imageBorderColor = useColorModeValue("white", "whiteAlpha.200");
+    const itemHoverBg = useColorModeValue('blue.50', 'whiteAlpha.100');
+    const scheduleBorderBottom = useColorModeValue("gray.50", "whiteAlpha.50");
+    const overlayBg = useColorModeValue("whiteAlpha.800", "blackAlpha.800");
+    const inputFocusBg = useColorModeValue("white", "gray.800");
 
     useEffect(() => {
         init();
@@ -178,28 +193,68 @@ const LocalCongregations = () => {
 
     // Haversine Distance (Air/Straight)
     const getAirDist = (lat, lon) => {
-        if (!lat || !lon) return null;
+        const pLat = parseFloat(lat);
+        const pLon = parseFloat(lon);
+        if (isNaN(pLat) || isNaN(pLon) || pLat === 0) return null;
+
         const R = 6371; // km
-        const dLat = (lat - CENTRAL_OFFICE.lat) * (Math.PI / 180);
-        const dLon = (lon - CENTRAL_OFFICE.lng) * (Math.PI / 180);
+        const dLat = (pLat - CENTRAL_OFFICE.lat) * (Math.PI / 180);
+        const dLon = (pLon - CENTRAL_OFFICE.lng) * (Math.PI / 180);
         const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(CENTRAL_OFFICE.lat * (Math.PI / 180)) * Math.cos(lat * (Math.PI / 180)) *
+            Math.cos(CENTRAL_OFFICE.lat * (Math.PI / 180)) * Math.cos(pLat * (Math.PI / 180)) *
             Math.sin(dLon / 2) * Math.sin(dLon / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return (R * c).toFixed(1);
+        const res = R * c;
+        return isNaN(res) ? null : res.toFixed(1);
     };
 
     const getRoadDist = (airDist) => {
-        if (!airDist) return null;
+        const val = parseFloat(airDist);
+        if (isNaN(val) || val <= 0) return null;
         // PH Roads are winding; 1.37 is a standard expansion factor for air-to-road distance
-        return (parseFloat(airDist) * 1.37).toFixed(1);
+        const res = val * 1.37;
+        return isNaN(res) ? null : res.toFixed(1);
     };
 
     const getEstTraffic = (roadDist) => {
-        if (!roadDist) return null;
+        const val = parseFloat(roadDist);
+        if (isNaN(val) || val <= 0) return null;
         // Avg speed 28km/h including traffic delays
-        const mins = Math.round((parseFloat(roadDist) / 28) * 60 + 10);
-        return mins;
+        const mins = Math.round((val / 28) * 60 + 10);
+        return isNaN(mins) ? null : mins;
+    };
+
+    const formatDuration = (mins) => {
+        if (!mins) return "---";
+        const totalMinutes = parseInt(mins);
+        if (isNaN(totalMinutes)) return mins;
+        if (totalMinutes < 60) return `${totalMinutes}min`;
+        const h = Math.floor(totalMinutes / 60);
+        const m = totalMinutes % 60;
+        return m > 0 ? `${h}hr ${m}min` : `${h}hr`;
+    };
+
+    // parseSchedule function removed to restore previous HTML-based design
+
+    const handleTimeClick = (timeStr) => {
+        setClickedTime(timeStr);
+        const normalizedTime = timeStr.trim();
+
+        // Find matching congregations using a more flexible regex to handle HTML tags or whitespace variations
+        // We look for the exact time string but allow different surrounding content
+        const matches = allCongregations.filter(c => {
+            if (!c.schedule) return false;
+            if (c.id === selectedLocale?.id) return false;
+
+            // This regex looks for the time string within a chip span or similar structure
+            // We escape the time string for safety
+            const escaped = normalizedTime.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`>\\s*${escaped}\\s*<`, 'i');
+            return regex.test(c.schedule);
+        });
+
+        setMatchingLocales(matches);
+        onMatchingOpen();
     };
 
     const filtered = useMemo(() => {
@@ -297,7 +352,7 @@ const LocalCongregations = () => {
             backgroundSize="cover" backgroundPosition="center"
         >
             {/* Background Layer */}
-            <Box position="absolute" inset={0} bg={useColorModeValue("whiteAlpha.800", "blackAlpha.800")} backdropFilter="blur(5px)" zIndex={0} />
+            <Box position="absolute" inset={0} bg={overlayBg} backdropFilter="blur(5px)" zIndex={0} />
 
             <Flex position="relative" zIndex={1} h="100%" flexDir="column" p={{ base: 4, md: 8 }}>
                 {/* Header */}
@@ -325,7 +380,7 @@ const LocalCongregations = () => {
                             bg={glassBg} px={14} fontSize="xl" fontWeight="bold"
                             border="2px solid" borderColor={borderColor}
                             shadow="2xl" color={titleColor}
-                            _focus={{ borderColor: "blue.400", bg: useColorModeValue("white", "gray.800") }}
+                            _focus={{ borderColor: "blue.400", bg: inputFocusBg }}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -341,53 +396,89 @@ const LocalCongregations = () => {
                             <Spinner size="xl" thickness="4px" color="blue.500" /><Text fontWeight="black" color="blue.500">INITIATING GEOSPATIAL DATA...</Text>
                         </Flex>
                     ) : (
-                        <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-                            <AnimatePresence>
-                                {filtered.map(c => {
-                                    const airDistBase = c.air_distance || (getAirDist(c.latitude, c.longitude) ? `${getAirDist(c.latitude, c.longitude)} KM` : null);
-                                    const roadDistBase = c.road_distance || (getRoadDist(parseFloat(airDistBase)) ? `${getRoadDist(parseFloat(airDistBase))} KM` : null);
-                                    const trafficBase = c.travel_time || (getEstTraffic(parseFloat(roadDistBase)) ? `${getEstTraffic(parseFloat(roadDistBase))} MINS` : null);
+                        <VStack spacing={3} align="stretch" pb={8}>
+                            <AnimatePresence mode="popLayout">
+                                {filtered.map((c, i) => {
+                                    // Robust parsing to handle 'NaN km' or invalid distance strings from DB
+                                    const parseSafe = (val) => {
+                                        if (!val || typeof val !== 'string' || val.includes('NaN')) return null;
+                                        const p = parseFloat(val);
+                                        return isNaN(p) ? null : p;
+                                    };
+
+                                    const rawAir = parseSafe(c.air_distance) || getAirDist(c.latitude, c.longitude);
+                                    const airDistBase = rawAir ? `${rawAir} KM` : "---";
+
+                                    const rawRoad = parseSafe(c.road_distance) || getRoadDist(rawAir);
+                                    const roadDistBase = rawRoad ? `${rawRoad} KM` : "---";
+
+                                    const trafficMins = parseSafe(c.travel_time) || getEstTraffic(rawRoad);
+                                    const trafficBase = formatDuration(trafficMins);
 
                                     return (
                                         <Box
                                             key={c.id} as={motion.div} layout
-                                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                                            bg={cardBg} p={6} borderRadius="3xl" shadow="xl" border="1px solid" borderColor={borderColor}
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                                            transition={{ duration: 0.2, delay: i * 0.02 }}
+                                            bg={cardBg} px={6} py={3} borderRadius="2xl" shadow="md" border="1px solid" borderColor={borderColor}
                                             cursor="pointer" onClick={() => handleSelectLocale(c)}
-                                            whileHover={{ y: -8, shadow: "2xl", borderColor: "#4299E1" }} transition="all 0.4s ease"
+                                            whileHover={{ x: 10, shadow: "lg", borderColor: "blue.400", backgroundColor: itemHoverBg }}
                                         >
-                                            <VStack align="stretch" spacing={4}>
-                                                <Flex justify="space-between" align="start">
+                                            <Flex justify="space-between" align="center" gap={4}>
+                                                <HStack spacing={4} flex={1}>
+                                                    <Box p={2} bg="blue.500" color="white" borderRadius="xl" shadow="inner">
+                                                        <Icon as={FaMapPin} boxSize={3} />
+                                                    </Box>
                                                     <VStack align="start" spacing={0}>
-                                                        <Text fontWeight="1000" fontSize="lg" color={titleColor}>{c.name}</Text>
-                                                        <Text fontSize="xs" fontWeight="black" color="blue.400">{c.District?.name}</Text>
+                                                        <Text fontWeight="1000" fontSize="md" color={titleColor} noOfLines={1}>{c.name}</Text>
+                                                        <Text fontSize="xs" fontWeight="black" color="blue.400" textTransform="uppercase" letterSpacing="widest">{c.District?.name}</Text>
                                                     </VStack>
-                                                    <Box p={3} bg="blue.500" color="white" borderRadius="2xl shadow-lg"><FaMapPin /></Box>
-                                                </Flex>
+                                                </HStack>
 
-                                                <Divider />
+                                                <HStack spacing={8} display={{ base: "none", md: "flex" }} mr={4}>
+                                                    <VStack align="center" spacing={0} minW="80px">
+                                                        <Text fontSize="9px" fontWeight="black" color="gray.500" letterSpacing="widest" opacity={0.7}>AIR DISTANCE</Text>
+                                                        <Text fontSize="sm" fontWeight="black" color={titleColor}>{airDistBase || "---"}</Text>
+                                                    </VStack>
+                                                    <VStack align="center" spacing={0} minW="80px">
+                                                        <Text fontSize="9px" fontWeight="black" color="gray.500" letterSpacing="widest" opacity={0.7}>ROAD DISTANCE</Text>
+                                                        <Text fontSize="sm" fontWeight="black" color={titleColor}>{roadDistBase || "---"}</Text>
+                                                    </VStack>
+                                                    <VStack align="center" spacing={0} minW="100px">
+                                                        <Text fontSize="9px" fontWeight="black" color="orange.500" letterSpacing="widest" opacity={0.8}>AVG TRAVEL</Text>
+                                                        <Text fontSize="sm" fontWeight="black" color={titleColor}>{trafficBase || "---"}</Text>
+                                                    </VStack>
+                                                </HStack>
 
-                                                <SimpleGrid columns={2} spacing={4}>
-                                                    <VStack align="start" spacing={0}>
-                                                        <HStack color="green.500" spacing={1} fontSize="10px" fontWeight="black"><FaCar /><Text>AIR DISTANCE</Text></HStack>
-                                                        <Text fontSize="md" fontWeight="black" color={titleColor}>{airDistBase || "---"}</Text>
-                                                    </VStack>
-                                                    <VStack align="start" spacing={0}>
-                                                        <HStack color="blue.500" spacing={1} fontSize="10px" fontWeight="black"><FaRoad /><Text>ROAD DISTANCE</Text></HStack>
-                                                        <Text fontSize="md" fontWeight="black" color={titleColor}>{roadDistBase || "---"}</Text>
-                                                    </VStack>
-                                                    <VStack align="start" spacing={0}>
-                                                        <HStack color="orange.500" spacing={1} fontSize="10px" fontWeight="black"><FaClock /><Text>EST. TRAFFIC</Text></HStack>
-                                                        <Text fontSize="md" fontWeight="black" color={titleColor}>{trafficBase || "---"}</Text>
-                                                    </VStack>
-                                                    <Flex align="center" justify="end"><Button rightIcon={<FaExternalLinkAlt />} colorScheme="blue" variant="link" size="sm" fontWeight="black">DETAILS</Button></Flex>
-                                                </SimpleGrid>
-                                            </VStack>
+                                                <IconButton
+                                                    icon={<FaExternalLinkAlt />}
+                                                    colorScheme="blue"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    borderRadius="full"
+                                                    aria-label="View Details"
+                                                    _hover={{ bg: 'blue.100', color: 'blue.600' }}
+                                                />
+                                            </Flex>
                                         </Box>
                                     );
                                 })}
                             </AnimatePresence>
-                        </SimpleGrid>
+
+                            {searchTerm && filtered.length === 0 && !loading && (
+                                <Flex py={12} justify="center" align="center" flexDir="column" opacity={0.6}>
+                                    <Box p={6} borderRadius="full" bg="whiteAlpha.200" mb={4}>
+                                        <FaSearch size={40} color="gray.500" />
+                                    </Box>
+                                    <VStack spacing={1}>
+                                        <Text fontWeight="black" color={titleColor} fontSize="lg">No results matching your search</Text>
+                                        <Text fontSize="sm" color={subTextColor}>Try a different locale name or district</Text>
+                                    </VStack>
+                                </Flex>
+                            )}
+                        </VStack>
                     )}
                 </Box>
             </Flex>
@@ -510,16 +601,21 @@ const LocalCongregations = () => {
                                         </Button>
                                         <Button
                                             onClick={() => {
-                                                const air = getAirDist(selectedLocale.latitude, selectedLocale.longitude);
-                                                const road = getRoadDist(air);
-                                                const traffic = getEstTraffic(road);
+                                                const parseSafe = (val) => {
+                                                    if (!val || typeof val !== 'string' || val.includes('NaN')) return null;
+                                                    const p = parseFloat(val);
+                                                    return isNaN(p) ? null : p;
+                                                };
+                                                const air = parseSafe(selectedLocale.air_distance) || getAirDist(selectedLocale.latitude, selectedLocale.longitude);
+                                                const road = parseSafe(selectedLocale.road_distance) || getRoadDist(air);
+                                                const traffic = parseSafe(selectedLocale.travel_time) || getEstTraffic(road);
                                                 const tz = localeTimezone ? getTimezoneInfo(localeTimezone, currentTime)?.diffLabel : null;
 
                                                 exportLocaleToPDF({
                                                     ...selectedLocale,
                                                     air_distance: air ? `${air} KM` : null,
                                                     road_distance: road ? `${road} KM` : null,
-                                                    travel_time: traffic ? `${traffic} MIN` : null,
+                                                    travel_time: traffic ? formatDuration(traffic) : null,
                                                     timezone_diff: tz
                                                 }, currentDistrictName);
                                             }}
@@ -540,21 +636,54 @@ const LocalCongregations = () => {
                                         <SimpleGrid columns={3} spacing={2}>
                                             <VStack p={3} bg="blackAlpha.50" borderRadius="2xl" align="center">
                                                 <Text fontSize="8px" fontWeight="black" color="gray.500">AIR DISTANCE</Text>
-                                                <Text fontWeight="1000" fontSize="sm">
-                                                    {selectedLocale.air_distance || (getAirDist(selectedLocale.latitude, selectedLocale.longitude) ? `${getAirDist(selectedLocale.latitude, selectedLocale.longitude)} KM` : "---")}
-                                                </Text>
+                                                <Skeleton isLoaded={!isScraping} h="14px">
+                                                    <Text fontWeight="1000" fontSize="sm">
+                                                        {(() => {
+                                                            const parseSafe = (val) => {
+                                                                if (!val || typeof val !== 'string' || val.includes('NaN')) return null;
+                                                                const p = parseFloat(val);
+                                                                return isNaN(p) ? null : p;
+                                                            };
+                                                            const val = parseSafe(selectedLocale.air_distance) || getAirDist(selectedLocale.latitude, selectedLocale.longitude);
+                                                            return val ? `${val} KM` : "---";
+                                                        })()}
+                                                    </Text>
+                                                </Skeleton>
                                             </VStack>
                                             <VStack p={3} bg="blackAlpha.50" borderRadius="2xl" align="center">
                                                 <Text fontSize="8px" fontWeight="black" color="gray.500">ROAD DISTANCE</Text>
-                                                <Text fontWeight="1000" fontSize="sm">
-                                                    {selectedLocale.road_distance || (getRoadDist(getAirDist(selectedLocale.latitude, selectedLocale.longitude)) ? `${getRoadDist(getAirDist(selectedLocale.latitude, selectedLocale.longitude))} KM` : "---")}
-                                                </Text>
+                                                <Skeleton isLoaded={!isScraping} h="14px">
+                                                    <Text fontWeight="1000" fontSize="sm">
+                                                        {(() => {
+                                                            const parseSafe = (val) => {
+                                                                if (!val || typeof val !== 'string' || val.includes('NaN')) return null;
+                                                                const p = parseFloat(val);
+                                                                return isNaN(p) ? null : p;
+                                                            };
+                                                            const air = parseSafe(selectedLocale.air_distance) || getAirDist(selectedLocale.latitude, selectedLocale.longitude);
+                                                            const road = parseSafe(selectedLocale.road_distance) || getRoadDist(air);
+                                                            return road ? `${road} KM` : "---";
+                                                        })()}
+                                                    </Text>
+                                                </Skeleton>
                                             </VStack>
                                             <VStack p={3} bg="blackAlpha.50" borderRadius="2xl" align="center">
                                                 <Text fontSize="8px" fontWeight="black" color="gray.500">AVG TRAVEL</Text>
-                                                <Text fontWeight="1000" fontSize="sm">
-                                                    {selectedLocale.travel_time || (getEstTraffic(getRoadDist(getAirDist(selectedLocale.latitude, selectedLocale.longitude))) ? `${getEstTraffic(getRoadDist(getAirDist(selectedLocale.latitude, selectedLocale.longitude)))} MIN` : "---")}
-                                                </Text>
+                                                <Skeleton isLoaded={!isScraping} h="14px">
+                                                    <Text fontWeight="1000" fontSize="sm">
+                                                        {(() => {
+                                                            const parseSafe = (val) => {
+                                                                if (!val || typeof val !== 'string' || val.includes('NaN')) return null;
+                                                                const p = parseFloat(val);
+                                                                return isNaN(p) ? null : p;
+                                                            };
+                                                            const air = parseSafe(selectedLocale.air_distance) || getAirDist(selectedLocale.latitude, selectedLocale.longitude);
+                                                            const road = parseSafe(selectedLocale.road_distance) || getRoadDist(air);
+                                                            const traffic = parseSafe(selectedLocale.travel_time) || getEstTraffic(road);
+                                                            return formatDuration(traffic);
+                                                        })()}
+                                                    </Text>
+                                                </Skeleton>
                                             </VStack>
                                         </SimpleGrid>
                                     </Box>
@@ -612,19 +741,23 @@ const LocalCongregations = () => {
                                             <Box>
                                                 <Text fontSize="xs" fontWeight="black" color="gray.400" mb={3}>WORSHIP SERVICE SCHEDULE</Text>
                                                 <Box
-                                                    className="schedule-box"
-                                                    dangerouslySetInnerHTML={{
-                                                        __html: (selectedLocale.schedule || "Fetching schedule...")
-                                                            .replace(/Worship Service Schedule/gi, "")
-                                                            .replace(/Be sure to confirm.*?before attending\./gi, "")
-                                                            .replace(/Worship service times may be temporarily or recently changed\./gi, "")
-                                                            .replace(/Wednesday\s*$/gi, "")
-                                                            .trim()
+                                                    className="schedule-container"
+                                                    dangerouslySetInnerHTML={{ __html: selectedLocale.schedule || '<p style="color:gray; font-weight:bold; font-size:14px;">No schedule available.</p>' }}
+                                                    onClick={(e) => {
+                                                        const chip = e.target.closest('.chip');
+                                                        if (chip) {
+                                                            handleTimeClick(chip.innerText.trim());
+                                                        }
                                                     }}
                                                     sx={{
-                                                        '.daygroup': { mb: 4, pb: 2, borderBottom: '1px solid', borderColor: 'gray.100' },
-                                                        'h6': { fontWeight: '800', color: 'blue.500', textTransform: 'uppercase', fontSize: '10px', mb: 2 },
-                                                        '.chip': { bg: 'blue.50', px: 2, py: 1, borderRadius: 'md', mr: 2, mb: 2, display: 'inline-flex', fontSize: 'xs', fontWeight: 'bold', color: 'blue.700' }
+                                                        '& .daygroup': { marginBottom: '15px' },
+                                                        '& .daygroup h6': { color: 'blue.500', fontSize: 'xs', fontWeight: '800', textTransform: 'uppercase', letterSpacing: 'widest', marginBottom: '8px' },
+                                                        '& .chip-break': { display: 'flex', flexWrap: 'wrap', gap: '8px' },
+                                                        '& .chip': {
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                            _hover: { transform: 'scale(1.05)', bg: 'blue.500', color: 'white' }
+                                                        }
                                                     }}
                                                 />
                                             </Box>
@@ -659,6 +792,67 @@ const LocalCongregations = () => {
                     </DrawerBody>
                 </DrawerContent>
             </Drawer>
+
+            {/* --- SHARED SCHEDULE MODAL --- */}
+            <Modal isOpen={isMatchingOpen} onClose={onMatchingClose} size="2xl" scrollBehavior="inside">
+                <ModalOverlay backdropFilter="blur(20px)" bg="blackAlpha.700" />
+                <ModalContent borderRadius="3xl" bg={drawerBg} border="1px solid" borderColor="blue.500" overflow="hidden">
+                    <ModalHeader p={6} borderBottom="1px solid" borderColor={borderColor}>
+                        <VStack align="start" spacing={1}>
+                            <HStack color="blue.500">
+                                <Icon as={FaClock} />
+                                <Text fontSize="xs" fontWeight="black" letterSpacing="widest">SHARED SCHEDULE FINDER</Text>
+                            </HStack>
+                            <Text fontSize="xl" fontWeight="black" color={titleColor}>
+                                LOCALES WITH {clickedTime} SCHEDULE
+                            </Text>
+                            <Badge colorScheme="blue" borderRadius="full" px={3}>{matchingLocales.length} RESULTS FOUND</Badge>
+                        </VStack>
+                    </ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody p={6}>
+                        {matchingLocales.length > 0 ? (
+                            <VStack spacing={3} align="stretch">
+                                {matchingLocales.map((match, idx) => (
+                                    <Box
+                                        key={match.id}
+                                        p={4}
+                                        bg={infoBoxBg}
+                                        borderRadius="2xl"
+                                        border="1px solid"
+                                        borderColor={borderColor}
+                                        _hover={{ borderColor: 'blue.400', transform: 'translateX(5px)', bg: itemHoverBg }}
+                                        transition="all 0.2s"
+                                        cursor="pointer"
+                                        onClick={() => {
+                                            handleSelectLocale(match);
+                                            onMatchingClose();
+                                        }}
+                                    >
+                                        <Flex justify="space-between" align="center">
+                                            <HStack spacing={4}>
+                                                <Box p={2} bg="blue.500" color="white" borderRadius="lg">
+                                                    <Icon as={FaMapPin} />
+                                                </Box>
+                                                <VStack align="start" spacing={0}>
+                                                    <Text fontWeight="black" fontSize="md" color={titleColor}>{match.name}</Text>
+                                                    <Text fontSize="xs" fontWeight="bold" color="blue.400">{match.District?.name}</Text>
+                                                </VStack>
+                                            </HStack>
+                                            <Button size="sm" variant="ghost" rightIcon={<FaExternalLinkAlt />} colorScheme="blue" fontWeight="black" fontSize="xs">VIEW PROFILE</Button>
+                                        </Flex>
+                                    </Box>
+                                ))}
+                            </VStack>
+                        ) : (
+                            <Flex h="200px" align="center" justify="center" flexDir="column" opacity={0.5}>
+                                <Icon as={FaSearch} boxSize={10} mb={4} />
+                                <Text fontWeight="black">NO OTHER LOCALES FOUND</Text>
+                            </Flex>
+                        )}
+                    </ModalBody>
+                </ModalContent>
+            </Modal>
         </Box>
     );
 };
